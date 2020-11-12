@@ -49,11 +49,11 @@ char signalButton(char c_button)
 
 	//Returns status and stores it into ret
 	char ret;
- 	ret = HAL_I2C_Master_Transmit(&hi2c1, 55, (uint8_t *) buf, 1, HAL_MAX_DELAY); //55 for adress is placeholder until actual adresses are known
- 	if(ret != HAL_OK)
- 	{
- 		HAL_Delay(1000);
- 		//Delay is temp, prevents spamming of main loop.
- 	}
+// 	ret = HAL_I2C_Master_Transmit(&hi2c1, 55, (uint8_t *) buf, 1, HAL_MAX_DELAY); //55 for adress is placeholder until actual adresses are known
+// 	if(ret != HAL_OK)
+// 	{
+// 		HAL_Delay(1000);
+// 		//Delay is temp, prevents spamming of main loop.
+// 	}
  	return 0;
 }

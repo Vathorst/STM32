@@ -21,6 +21,5 @@
 
 char chooseButton(char c_method);
 char signalButton(char c_button);
-extern I2C_HandleTypeDef hi2c1;
 
 #endif /* INC_BUTTONS_H_ */
