@@ -45,7 +45,7 @@ UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+	uint8_t buf[] = "Test transmission\r\n";
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -59,7 +59,7 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-	uint8_t buf[50];
+
 /* USER CODE END 0 */
 
 /**
@@ -103,7 +103,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	strcpy(buf, "Test transmission\r\n");
 	HAL_UART_Transmit(&huart1, buf, sizeof(buf), 100);
 	HAL_Delay(1000);
 
