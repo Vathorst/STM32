@@ -45,7 +45,7 @@ UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-	uint8_t buf[] = "Test transmission\r\n";
+	uint8_t buf[] = "Test t\r\n";
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
