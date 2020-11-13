@@ -93,7 +93,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  HAL_GPIO_WritePin(GPIOA, 1, GPIO_PIN_SET);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -103,8 +103,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	HAL_UART_Transmit(&huart1, buf, sizeof(buf), 100);
-	HAL_Delay(50);
+	HAL_UART_Transmit(&huart2, buf, sizeof(buf), 10);
+	HAL_Delay(200);
 
 
 
