@@ -104,7 +104,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	HAL_UART_Transmit(&huart2, buf, sizeof(buf), 10);
-	HAL_Delay(200);
+	HAL_Delay(1000);
 
 
 

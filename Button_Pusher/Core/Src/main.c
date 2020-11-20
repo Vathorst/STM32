@@ -114,7 +114,7 @@ int main(void)
   {
     /* USER CODE END WHILE */
     MX_USB_HOST_Process();
-    HAL_UART_Transmit(&huart2, "Test\r\n", 6, 100);
+    HAL_UART_Transmit(&huart2, rx_buff, 50, 100);
     HAL_Delay(1000);
     /* USER CODE BEGIN 3 */
 
