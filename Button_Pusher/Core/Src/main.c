@@ -76,9 +76,6 @@ void MX_USB_HOST_Process(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	 char chosen_button = 0;
-	 char pressed_button = 0;
-	 int buttonModule[BUTTON_AMOUNT];
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -105,7 +102,6 @@ int main(void)
   MX_USB_HOST_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&huart3, rx_buff, sizeof(rx_buff));
-  HAL_UART_Transmit_IT(&huart3, tx_buff, sizeof(tx_buff));
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -114,10 +110,10 @@ int main(void)
   {
     /* USER CODE END WHILE */
     MX_USB_HOST_Process();
+
+    /* USER CODE BEGIN 3 */
     HAL_UART_Transmit(&huart2, rx_buff, 50, 100);
     HAL_Delay(1000);
-    /* USER CODE BEGIN 3 */
-
   }
   /* USER CODE END 3 */
 }
@@ -180,7 +176,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 9600;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -213,7 +209,7 @@ static void MX_USART3_UART_Init(void)
 
   /* USER CODE END USART3_Init 1 */
   huart3.Instance = USART3;
-  huart3.Init.BaudRate = 115200;
+  huart3.Init.BaudRate = 9600;
   huart3.Init.WordLength = UART_WORDLENGTH_8B;
   huart3.Init.StopBits = UART_STOPBITS_1;
   huart3.Init.Parity = UART_PARITY_NONE;
