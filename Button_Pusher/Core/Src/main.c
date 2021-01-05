@@ -119,7 +119,7 @@ int main(void)
     HAL_Delay(3000);
     if(main_flag)
     {
-    	HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_ontvangen", 18, 100);
+    	HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_ontvangen\r\n", 19, 100);
     	HAL_UART_Transmit(&huart2, (uint8_t*)rec_buff, strlen(rec_buff), 100);
     }
   }
@@ -152,7 +152,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		msg_i = 0;
 		OOS_check = 1;
 	}
-	huart->RxState = HAL_UART_STATE_READY;
+	HAL_UART_Receive_IT(&huart3, rx_buff, 1);
 }
 
 
