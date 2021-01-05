@@ -102,10 +102,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	HAL_UART_Transmit(&huart2, buf, 8, 10);
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
-	HAL_Delay(2000);
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+	HAL_UART_Transmit(&huart2, buf, 6, 10);
 	HAL_Delay(2000);
   }
   /* USER CODE END 3 */
