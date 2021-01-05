@@ -209,8 +209,6 @@ void USART3_IRQHandler(void)
   /* USER CODE END USART3_IRQn 0 */
   HAL_UART_IRQHandler(&huart3);
   /* USER CODE BEGIN USART3_IRQn 1 */
-  uint8_t lbuf[] = "received interrupt\r\n";
-  HAL_UART_Transmit(&huart2, lbuf, sizeof(lbuf), 100);
   /* USER CODE END USART3_IRQn 1 */
 }
 

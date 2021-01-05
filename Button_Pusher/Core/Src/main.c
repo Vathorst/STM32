@@ -34,7 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define MSG_MAX_LEN 20
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -67,6 +67,9 @@ void MX_USB_HOST_Process(void);
 /* USER CODE BEGIN 0 */
 	uint8_t tx_buff[50];
 	uint8_t rx_buff[1];
+	uint8_t rec_buff[MSG_MAX_LEN];
+	uint8_t msg_i = 0;				// Index for rec_buff
+	uint8_t main_flag = 0;
 /* USER CODE END 0 */
 
 /**
@@ -114,13 +117,42 @@ int main(void)
     /* USER CODE BEGIN 3 */
     HAL_UART_Transmit(&huart2, (uint8_t*)"test_comm\r\n", 11, 100);
     HAL_Delay(3000);
+    if(main_flag)
+    {
+    	HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_ontvangen", 18, 100);
+    	HAL_UART_Transmit(&huart2, (uint8_t*)rec_buff, strlen(rec_buff), 100);
+    }
   }
   /* USER CODE END 3 */
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	__NOP();
+	// Used when message is out of sync with buffer
+	static uint8_t OOS_check = 0;
+	if(OOS_check && rx_buff[0] == '\n')
+		OOS_check = 0;
+
+	else if(msg_i < MSG_MAX_LEN/*-1*/)
+	{
+		rec_buff[msg_i] = rx_buff[0];
+		if(rx_buff[0] == '\n')
+		{
+			//rec_buff[msg_i+1] = '\0';
+			msg_i = 0;
+			main_flag = 1;
+		}
+		else
+		{
+			msg_i++;
+		}
+	}
+	else
+	{
+		msg_i = 0;
+		OOS_check = 1;
+	}
+	huart->RxState = HAL_UART_STATE_READY;
 }
 
 
@@ -344,7 +376,6 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
-
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None
