@@ -115,12 +115,11 @@ int main(void)
     MX_USB_HOST_Process();
 
     /* USER CODE BEGIN 3 */
-    HAL_UART_Transmit(&huart2, (uint8_t*)"test_comm\r\n", 11, 100);
-    HAL_Delay(3000);
     if(main_flag)
     {
     	HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_ontvangen\r\n", 19, 100);
     	HAL_UART_Transmit(&huart2, (uint8_t*)rec_buff, strlen(rec_buff), 100);
+    	main_flag = 0;
     }
   }
   /* USER CODE END 3 */
@@ -133,13 +132,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	if(OOS_check && rx_buff[0] == '\n')
 		OOS_check = 0;
 
-	else if(msg_i < MSG_MAX_LEN/*-1*/)
+	// Places new byte into global array
+	else if(msg_i < MSG_MAX_LEN)
 	{
 		rec_buff[msg_i] = rx_buff[0];
 		if(rx_buff[0] == '\n')
 		{
-			//rec_buff[msg_i+1] = '\0';
 			msg_i = 0;
+
+			// TODO: Instead of main_flag here, jump into a function.
 			main_flag = 1;
 		}
 		else
@@ -147,11 +148,16 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			msg_i++;
 		}
 	}
+
+	// Exception clause for handling messages larger than the dedicated buffer
+	// Message will be discarded and the buffer won't be read
 	else
 	{
 		msg_i = 0;
 		OOS_check = 1;
 	}
+
+	// Reads the next byte
 	HAL_UART_Receive_IT(&huart3, rx_buff, 1);
 }
 
