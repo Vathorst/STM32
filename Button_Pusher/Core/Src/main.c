@@ -66,7 +66,7 @@ void MX_USB_HOST_Process(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 	uint8_t tx_buff[50];
-	uint8_t rx_buff[50];
+	uint8_t rx_buff[1];
 /* USER CODE END 0 */
 
 /**
@@ -101,7 +101,7 @@ int main(void)
   MX_USART6_UART_Init();
   MX_USB_HOST_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_IT(&huart3, rx_buff, sizeof(rx_buff));
+  HAL_UART_Receive_IT(&huart3, rx_buff, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -117,6 +117,12 @@ int main(void)
   }
   /* USER CODE END 3 */
 }
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	__NOP();
+}
+
 
 /**
   * @brief System Clock Configuration
