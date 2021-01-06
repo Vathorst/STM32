@@ -35,6 +35,10 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define MSG_MAX_LEN 16
+#define SCHERM_UART huart6
+#define DEBUG_UART huart2
+#define SLAVE_UART huart3
+#define MSG_TIM htim2
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -43,6 +47,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim2;
+
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
 UART_HandleTypeDef huart6;
@@ -57,6 +63,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USART6_UART_Init(void);
+static void MX_TIM2_Init(void);
 void MX_USB_HOST_Process(void);
 
 /* USER CODE BEGIN PFP */
@@ -68,7 +75,7 @@ void MX_USB_HOST_Process(void);
 	uint8_t rx_buff[1];
 	uint8_t rec_buff[MSG_MAX_LEN];
 	uint8_t msg_i = 0;				// Index for rec_buff
-	uint8_t main_flag = 0;
+	uint8_t msg_flag = 0;
 	uint8_t msg_enable = 0;
 /* USER CODE END 0 */
 
@@ -103,8 +110,9 @@ int main(void)
   MX_USART3_UART_Init();
   MX_USART6_UART_Init();
   MX_USB_HOST_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_IT(&huart3, rx_buff, 1);
+  HAL_UART_Receive_IT(&SLAVE_UART, rx_buff, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -117,17 +125,13 @@ int main(void)
     /* USER CODE BEGIN 3 */
     if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0))
     {
-    	HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_verstuurd\r\n", 19, 100);
-    	msg_enable = 1;
-    	HAL_UART_Transmit(&huart3, (uint8_t*)"2 ADR 0\n", 8, 100);
+    	SendMessage("2 ADR 0\n", 3000);
 
-
-    	while(main_flag == 0){}
-    	if(main_flag)
+    	if(msg_flag)
     	{
-			HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_ontvangen: ", 19, 100);
-			HAL_UART_Transmit(&huart2, (uint8_t*)rec_buff, strlen((int8_t*)rec_buff), 100);
-			main_flag = 0;
+			HAL_UART_Transmit(&DEBUG_UART, (uint8_t*)"bericht_ontvangen: ", 19, 100);
+			HAL_UART_Transmit(&DEBUG_UART, (uint8_t*)rec_buff, strlen((int8_t*)rec_buff), 100);
+			msg_flag = 0;
     	}
     }
   }
@@ -174,6 +178,51 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 42000;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 200;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+
 }
 
 /**
@@ -358,7 +407,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	// Only listens to the message if
 	if(!msg_enable)
 	{
-		HAL_UART_Receive_IT(&huart3, rx_buff, 1);
+		HAL_UART_Receive_IT(&SLAVE_UART, rx_buff, 1);
 		return;
 	}
 
@@ -381,7 +430,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		if(rx_buff[0] == '\n')
 		{
 			msg_i = 0;
-			main_flag = 1;
+			msg_flag = 1;
 		}
 		else
 		{
@@ -399,7 +448,40 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	}
 
 	// Reads the next byte
-	HAL_UART_Receive_IT(&huart3, rx_buff, 1);
+	HAL_UART_Receive_IT(&SLAVE_UART, rx_buff, 1);
+}
+
+char CheckTimeout(const char * valid_ans, int timeout)
+{
+	int tim_cnt = 0;
+	HAL_TIM_Base_Start(&MSG_TIM);
+	__HAL_TIM_CLEAR_FLAG(&MSG_TIM, TIM_FLAG_UPDATE);
+
+	while(msg_flag == 0 && tim_cnt < (int)((float)timeout/100))
+	{
+		if(__HAL_TIM_GET_FLAG(&MSG_TIM, TIM_FLAG_UPDATE))
+		{
+			tim_cnt++;
+			__HAL_TIM_CLEAR_FLAG(&MSG_TIM, TIM_FLAG_UPDATE);
+		}
+	}
+
+	HAL_TIM_Base_Stop(&MSG_TIM);
+	__HAL_TIM_SET_COUNTER(&MSG_TIM, 0);
+
+	if(msg_flag)
+	{
+		if(strstr(valid_ans, rec_buff) != NULL)
+			return 1;
+	}
+	return 0;		// implicit else
+}
+
+char SendMessage(const char * msg, uint16_t timeout)
+{
+	msg_enable = 1;
+	HAL_UART_Transmit(&SLAVE_UART, (uint8_t*) msg, strlen(msg), 10);
+	return (CheckTimeout("ACK\n", 2000));
 }
 /* USER CODE END 4 */
 
