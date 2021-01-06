@@ -108,10 +108,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	HAL_UART_Transmit(&huart2, "LongMessage\n", 12, 10);
-	HAL_Delay(1000);
-	HAL_UART_Transmit(&huart2, "smsg\n", 5, 10);
-	HAL_Delay(1000);
+	if(main_flag)
+	{
+		main_flag = 0;
+		HAL_UART_Transmit(&huart2, (uint8_t*)"ACK\n", 4, 100);
+	}
   }
   /* USER CODE END 3 */
 }

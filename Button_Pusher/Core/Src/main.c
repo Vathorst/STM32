@@ -117,12 +117,15 @@ int main(void)
     /* USER CODE BEGIN 3 */
     if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0))
     {
-    	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0)) {}	// Block further progress in code untill button is released
-    	HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_ontvangen\r\n", 19, 100);
+    	HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_verstuurd\r\n", 19, 100);
+    	msg_enable = 1;
+    	HAL_UART_Transmit(&huart3, (uint8_t*)"0 ADR 0\n", 8, 100);
 
+
+    	while(main_flag == 0){}
     	if(main_flag)
     	{
-			HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_ontvangen\r\n", 19, 100);
+			HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_ontvangen: ", 19, 100);
 			HAL_UART_Transmit(&huart2, (uint8_t*)rec_buff, strlen(rec_buff), 100);
 			main_flag = 0;
     	}
@@ -353,7 +356,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	// Master has defined answers its looking for
 	// Only listens to the message if
-	if(msg_enable)
+	if(!msg_enable)
 	{
 		HAL_UART_Receive_IT(&huart3, rx_buff, 1);
 		return;
