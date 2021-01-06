@@ -33,6 +33,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define MSG_MAX_LEN 16
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -59,7 +60,11 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+uint8_t rx_buff[1];
+uint8_t rec_buff[MSG_MAX_LEN];
+uint8_t msg_i = 0;				// Index for rec_buff
+uint8_t main_flag = 0;
+uint8_t slave_adr = 0;
 /* USER CODE END 0 */
 
 /**
@@ -93,6 +98,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
+  HAL_UART_Receive_IT(&huart2, rx_buff, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -246,7 +252,58 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	// Used when message is out of sync with buffer
+	static uint8_t OOS_check = 0;
+	if(OOS_check)
+	{
+		if(rx_buff[0] == '\n')
+			OOS_check = 0;
+	}
 
+	// Places new byte into global array
+	else if(msg_i < MSG_MAX_LEN)
+	{
+		// Once a new message has started, delete the old message
+		if(msg_i == 0)
+			memset(rec_buff, 0, sizeof(rec_buff));
+
+		// Copying of new byte
+		rec_buff[msg_i] = rx_buff[0];
+
+		// Check if message is complete
+		if(rx_buff[0] == '\n')
+		{
+			msg_i = 0;
+
+			int msg_adr = atoi(rec_buff);
+			if(msg_adr == 0 || msg_adr == slave_adr)
+				main_flag = 1;
+			else
+			{
+				__NOP();
+			}
+
+		}
+		else
+		{
+			msg_i++;
+		}
+	}
+
+	// Exception clause for handling messages larger than the dedicated buffer
+	// Message will be discarded and the buffer won't be read
+	else
+	{
+		msg_i = 0;
+		if(rx_buff[0] != '\n')
+			OOS_check = 1;
+	}
+
+	// Reads the next byte
+	HAL_UART_Receive_IT(&huart2, rx_buff, 1);
+}
 /* USER CODE END 4 */
 
 /**
