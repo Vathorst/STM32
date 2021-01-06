@@ -118,7 +118,7 @@ int main(void)
     if(HAL_GPIO_ReadPin(GPIOB, 1) == GPIO_PIN_SET)
     {
     	HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_ontvangen\r\n", 19, 100);
-    	while(HAL_GPIO_ReadPin(GPIOB, 1) == GPIO_PIN_SET) {}
+    	while(HAL_GPIO_ReadPin(GPIOB, 1) == GPIO_PIN_SET) {}	// Block further progress in code untill button is released
 
     	if(main_flag)
     	{
