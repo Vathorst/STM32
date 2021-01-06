@@ -34,7 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define MSG_MAX_LEN 20
+#define MSG_MAX_LEN 16
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -65,11 +65,11 @@ void MX_USB_HOST_Process(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-	uint8_t tx_buff[50];
 	uint8_t rx_buff[1];
 	uint8_t rec_buff[MSG_MAX_LEN];
 	uint8_t msg_i = 0;				// Index for rec_buff
 	uint8_t main_flag = 0;
+	uint8_t msg_enable = 0;
 /* USER CODE END 0 */
 
 /**
@@ -115,52 +115,21 @@ int main(void)
     MX_USB_HOST_Process();
 
     /* USER CODE BEGIN 3 */
-    if(main_flag)
+    if(HAL_GPIO_ReadPin(GPIOB, 1) == GPIO_PIN_SET)
     {
     	HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_ontvangen\r\n", 19, 100);
-    	HAL_UART_Transmit(&huart2, (uint8_t*)rec_buff, strlen(rec_buff), 100);
-    	main_flag = 0;
+    	while(HAL_GPIO_ReadPin(GPIOB, 1) == GPIO_PIN_SET) {}
+
+    	if(main_flag)
+    	{
+			HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_ontvangen\r\n", 19, 100);
+			HAL_UART_Transmit(&huart2, (uint8_t*)rec_buff, strlen(rec_buff), 100);
+			main_flag = 0;
+    	}
     }
   }
   /* USER CODE END 3 */
 }
-
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-	// Used when message is out of sync with buffer
-	static uint8_t OOS_check = 0;
-	if(OOS_check && rx_buff[0] == '\n')
-		OOS_check = 0;
-
-	// Places new byte into global array
-	else if(msg_i < MSG_MAX_LEN)
-	{
-		rec_buff[msg_i] = rx_buff[0];
-		if(rx_buff[0] == '\n')
-		{
-			msg_i = 0;
-
-			// TODO: Instead of main_flag here, jump into a function.
-			main_flag = 1;
-		}
-		else
-		{
-			msg_i++;
-		}
-	}
-
-	// Exception clause for handling messages larger than the dedicated buffer
-	// Message will be discarded and the buffer won't be read
-	else
-	{
-		msg_i = 0;
-		OOS_check = 1;
-	}
-
-	// Reads the next byte
-	HAL_UART_Receive_IT(&huart3, rx_buff, 1);
-}
-
 
 /**
   * @brief System Clock Configuration
@@ -344,11 +313,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(OTG_FS_PowerSwitchOn_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : B1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
+  /*Configure GPIO pin : PA0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : BOOT1_Pin */
   GPIO_InitStruct.Pin = BOOT1_Pin;
@@ -380,8 +349,57 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	// Master has defined answers its looking for
+	// Only listens to the message if
+	if(msg_enable)
+	{
+		HAL_UART_Receive_IT(&huart3, rx_buff, 1);
+		return;
+	}
 
+	// Used when message is out of sync with buffer
+	static uint8_t OOS_check = 0;
+	if(OOS_check)
+	{
+		if(rx_buff[0] == '\n')
+			OOS_check = 0;
+	}
+
+	// Places new byte into global array
+	else if(msg_i < MSG_MAX_LEN)
+	{
+		// Once a new message has started, delete the old message
+		if(msg_i == 0)
+			memset(rec_buff, 0, sizeof(rec_buff));
+
+		rec_buff[msg_i] = rx_buff[0];
+		if(rx_buff[0] == '\n')
+		{
+			msg_i = 0;
+			main_flag = 1;
+		}
+		else
+		{
+			msg_i++;
+		}
+	}
+
+	// Exception clause for handling messages larger than the dedicated buffer
+	// Message will be discarded and the buffer won't be read
+	else
+	{
+		msg_i = 0;
+		if(rx_buff[0] != '\n')
+			OOS_check = 1;
+	}
+
+	// Reads the next byte
+	HAL_UART_Receive_IT(&huart3, rx_buff, 1);
+}
 /* USER CODE END 4 */
+
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None
