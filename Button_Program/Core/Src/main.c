@@ -111,13 +111,11 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	if(main_flag)
 	{
-		char * cmd_tok;
 		char cmd[3];
+		char sec_adr;
+		char adr = DisectCommand(cmd, &sec_adr);
 
-		char adr = atoi(strtok(rec_buff, " "));
-		cmd_tok = strtok(NULL, " ");
-		char sec_adr = atoi(strtok(NULL, " "));
-		sprintf(cmd, "%s", cmd_tok);
+
 		__NOP();
 		main_flag = 0;
 	}
@@ -287,7 +285,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			msg_i = 0;
 			HAL_UART_Transmit(&huart2, (uint8_t*)"ACK\n", 4, 100);
 
-			int msg_adr = atoi(rec_buff);
+			int msg_adr = atoi((char *)rec_buff);
 			if(msg_adr == 0 || msg_adr == slave_adr)
 			{
 
@@ -317,6 +315,20 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	// Reads the next byte
 	HAL_UART_Receive_IT(&huart2, rx_buff, 1);
 }
+
+
+char DisectCommand(char * cmd, char * sec_adr)
+{
+	char * cmd_tok;
+
+	char adr = atoi(strtok((char*)rec_buff, " "));
+	cmd_tok = strtok(NULL, " ");
+	*sec_adr = atoi(strtok(NULL, " "));
+	sprintf(cmd, "%s", cmd_tok);
+
+	return adr;
+}
+
 /* USER CODE END 4 */
 
 /**

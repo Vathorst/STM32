@@ -56,7 +56,7 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+char DisectCommand(char * cmd, char * sec_adr);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
