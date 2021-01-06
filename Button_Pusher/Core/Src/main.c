@@ -115,10 +115,10 @@ int main(void)
     MX_USB_HOST_Process();
 
     /* USER CODE BEGIN 3 */
-    if(HAL_GPIO_ReadPin(GPIOB, 1) == GPIO_PIN_SET)
+    if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0))
     {
+    	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0)) {}	// Block further progress in code untill button is released
     	HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_ontvangen\r\n", 19, 100);
-    	while(HAL_GPIO_ReadPin(GPIOB, 1) == GPIO_PIN_SET) {}	// Block further progress in code untill button is released
 
     	if(main_flag)
     	{
