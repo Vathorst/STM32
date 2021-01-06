@@ -119,14 +119,14 @@ int main(void)
     {
     	HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_verstuurd\r\n", 19, 100);
     	msg_enable = 1;
-    	HAL_UART_Transmit(&huart3, (uint8_t*)"0 ADR 0\n", 8, 100);
+    	HAL_UART_Transmit(&huart3, (uint8_t*)"2 ADR 0\n", 8, 100);
 
 
     	while(main_flag == 0){}
     	if(main_flag)
     	{
 			HAL_UART_Transmit(&huart2, (uint8_t*)"bericht_ontvangen: ", 19, 100);
-			HAL_UART_Transmit(&huart2, (uint8_t*)rec_buff, strlen(rec_buff), 100);
+			HAL_UART_Transmit(&huart2, (uint8_t*)rec_buff, strlen((int8_t*)rec_buff), 100);
 			main_flag = 0;
     	}
     }

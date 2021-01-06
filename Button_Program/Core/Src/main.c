@@ -64,7 +64,7 @@ uint8_t rx_buff[1];
 uint8_t rec_buff[MSG_MAX_LEN];
 uint8_t msg_i = 0;				// Index for rec_buff
 uint8_t main_flag = 0;
-uint8_t slave_adr = 0;
+uint8_t slave_adr = 2;
 /* USER CODE END 0 */
 
 /**
@@ -99,6 +99,7 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&huart2, rx_buff, 1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -110,8 +111,15 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	if(main_flag)
 	{
+		char * cmd_tok;
+		char cmd[3];
+
+		char adr = atoi(strtok(rec_buff, " "));
+		cmd_tok = strtok(NULL, " ");
+		char sec_adr = atoi(strtok(NULL, " "));
+		sprintf(cmd, "%s", cmd_tok);
+		__NOP();
 		main_flag = 0;
-		HAL_UART_Transmit(&huart2, (uint8_t*)"ACK\n", 4, 100);
 	}
   }
   /* USER CODE END 3 */
@@ -277,10 +285,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		if(rx_buff[0] == '\n')
 		{
 			msg_i = 0;
+			HAL_UART_Transmit(&huart2, (uint8_t*)"ACK\n", 4, 100);
 
 			int msg_adr = atoi(rec_buff);
 			if(msg_adr == 0 || msg_adr == slave_adr)
+			{
+
 				main_flag = 1;
+			}
 			else
 			{
 				__NOP();
