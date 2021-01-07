@@ -109,7 +109,7 @@ int main(void)
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&MASTER_UART, rx_buff, 1);
-
+  HAL_UART_Receive_IT(&SLAVE_UART, rx_buff, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -145,7 +145,7 @@ int main(void)
 		{
 			if(strcmp(cmd, "ASK") == 0 && slave_adr)
 			{
-				sprintf(reply, "ASK %d\n", slave_adr);
+				sprintf(reply, "ANS %d\n", slave_adr);
 				SendMessage(&MASTER_UART, reply);
 			}
 			else
@@ -369,9 +369,18 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		if(rx_buff[0] == '\n')
 		{
 			msg_i = 0;
-			if(strcmp("ACK\n", (char*)rec_buff) != 0)
-				HAL_UART_Transmit(huart, (uint8_t*)"ACK\n", 4, 100);
+			if((strcmp("ACK\n", (char*)rec_buff) != 0) && huart == &MASTER_UART)
+			{
 
+				HAL_UART_Transmit(huart, (uint8_t*)"ACK\n", 4, 100);
+			}
+			else if((strcmp("ACK\n", (char*)rec_buff) != 0) && huart == &SLAVE_UART)
+			{
+				HAL_UART_Transmit(&MASTER_UART, (uint8_t*)rec_buff, strlen((char*)rec_buff), 100);
+				__NOP();
+			}
+
+			// Compares the message address the the address of the slave
 			int msg_adr = atoi((char *)rec_buff);
 			if(msg_adr == 0 || msg_adr == slave_adr)
 			{
@@ -380,6 +389,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			}
 			else
 			{
+				HAL_UART_Transmit(&SLAVE_UART, (uint8_t*)rec_buff, strlen((char*)rec_buff), 100);
 				__NOP();
 			}
 
@@ -405,6 +415,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 char DisectCommand(char * cmd, char * sec_adr)
 {
+	// Reads the global message buffer and splits string up to three parts
+	// These are the address, the command and the optional second address for advanced commands
 	char * cmd_tok;
 
 	char adr = atoi(strtok((char*)rec_buff, " "));
@@ -417,10 +429,15 @@ char DisectCommand(char * cmd, char * sec_adr)
 
 char CheckTimeout(const char * valid_ans, int timeout)
 {
-	int tim_cnt = 0;
+	int tim_cnt = 0; // Allows communication to the master
+
+	// Starts the timer for the timeout function.
+	// Clears flag as a precaution
 	HAL_TIM_Base_Start(&MSG_TIM);
 	__HAL_TIM_CLEAR_FLAG(&MSG_TIM, TIM_FLAG_UPDATE);
 
+	// When a message has been received "msg_flag" will be 1
+	// This loop will count for "timeout" milliseconds
 	while(msg_flag == 0 && tim_cnt < (int)((float)timeout/100))
 	{
 		if(__HAL_TIM_GET_FLAG(&MSG_TIM, TIM_FLAG_UPDATE))
@@ -430,14 +447,19 @@ char CheckTimeout(const char * valid_ans, int timeout)
 		}
 	}
 
+	// Stops the timer and resets the counter
 	HAL_TIM_Base_Stop(&MSG_TIM);
 	__HAL_TIM_SET_COUNTER(&MSG_TIM, 0);
+
+	// Reads the incoming message (if received), and compares it to the expected answer
 	if(msg_flag)
 	{
 		msg_flag = 0;
 		if(strstr(valid_ans, (char*)rec_buff) != NULL)
 			return 1;
 	}
+
+	// if the earlier return statement didn't fire, return 0, indicating either a timeout or a wrong answer
 	return 0;		// implicit else
 
 }
