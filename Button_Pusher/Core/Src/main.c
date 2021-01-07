@@ -35,11 +35,34 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define MSG_MAX_LEN 16
+
 #define SCHERM_UART huart6
 #define DEBUG_UART huart2
 #define SLAVE_UART huart3
+
 #define MSG_TIM htim2
+#define LED_TIM htim5
+
 #define ACK_TIMEOUT 500
+
+#define LED_TOGGLE 2
+#define LED_ON 1
+#define LED_OFF 0
+
+#define BLUE_LED ((uint16_t)0x8000)
+#define RED_LED ((uint16_t)0x4000)
+#define ORANGE_LED ((uint16_t)0x2000)
+#define GREEN_LED ((uint16_t)0x1000)
+
+enum state_t {
+	STATE_STR,
+	STATE_ADR,
+	STATE_CHS,
+	STATE_CTR,
+	STATE_ERR,
+	STATE_END,
+};
+
 #define debug
 
 /* USER CODE END PD */
@@ -51,6 +74,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim5;
 
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
@@ -67,10 +91,13 @@ static void MX_USART2_UART_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USART6_UART_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM5_Init(void);
 void MX_USB_HOST_Process(void);
 
 /* USER CODE BEGIN PFP */
-
+char CheckTimeout(const char * valid_ans, int timeout);
+char SendMessage(const char * msg);
+void SetLed(uint16_t led_pin, uint8_t state);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -114,9 +141,16 @@ int main(void)
   MX_USART6_UART_Init();
   MX_USB_HOST_Init();
   MX_TIM2_Init();
+  MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&SLAVE_UART, rx_buff, 1);
   uint8_t no_slaves = 0;
+  enum state_t state = STATE_STR;
+  uint16_t mode = 360;
+  uint8_t score = 0;
+  uint8_t chosen_button = 0;
+  char buf[12];
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -127,17 +161,75 @@ int main(void)
     MX_USB_HOST_Process();
 
     /* USER CODE BEGIN 3 */
-    if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0))
+    switch(state)
     {
+    case STATE_STR:
+    	SetLed(GREEN_LED, LED_OFF);
+    	if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0))
+    	{
+    		SetLed(GREEN_LED, LED_ON);
+    		state = STATE_ADR;
+    	}
+    	break;
+
+    case STATE_ADR:
+    	SetLed(ORANGE_LED, LED_OFF);
     	if(SendMessage("0 ADR 1\n"))
     	{
     		if(CheckTimeout("SLAVE", ACK_TIMEOUT*2))
+    		{
     			no_slaves = atoi((char*)rec_buff);
+    			state = STATE_CHS;
+    		}
     		else
-    			continue;
+    		{
+    			SetLed(ORANGE_LED, LED_ON);
+    			state = STATE_STR;
+    		}
+    	}
+		else
+			state = STATE_STR;
+    	break;
+
+    case STATE_CHS:
+    	//TODO: print score
+    	chosen_button = rand() % (mode == 360 ? no_slaves : no_slaves >> 1);
+    	state = STATE_CTR;
+    	break;
+
+    case STATE_CTR:
+
+    	sprintf(buf, "0 ON %d\n", chosen_button);
+    	if(SendMessage((char*)buf))
+    	{
+    		if(CheckTimeout("PRESSED", 5000-(score*100)))
+    		{
+    			if(atoi((char*)rec_buff) == chosen_button)
+    			{
+    				SendMessage("0 OFF");
+    				state = STATE_CHS;
+    				score++;
+    			}
+    		}
+    		else
+    		{
+    			state = STATE_STR;
+    		}
     	}
     	else
-    		continue;
+    		state = STATE_ERR;
+    	break;
+
+    case STATE_ERR:
+
+    	break;
+
+    case STATE_END:
+
+    	break;
+
+    default:
+    	state = STATE_STR;
     }
   }
   __NOP(); // Should never reach here
@@ -229,6 +321,51 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * @brief TIM5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM5_Init(void)
+{
+
+  /* USER CODE BEGIN TIM5_Init 0 */
+
+  /* USER CODE END TIM5_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM5_Init 1 */
+
+  /* USER CODE END TIM5_Init 1 */
+  htim5.Instance = TIM5;
+  htim5.Init.Prescaler = 42000;
+  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim5.Init.Period = 500;
+  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim5, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM5_Init 2 */
+
+  /* USER CODE END TIM5_Init 2 */
 
 }
 
@@ -524,6 +661,23 @@ char SendMessage(const char * msg)
 	HAL_UART_Transmit(&SLAVE_UART, (uint8_t*) msg, strlen(msg), 100);
 	return (CheckTimeout("ACK\n", ACK_TIMEOUT));
 }
+
+void SetLed(uint16_t led_pin, uint8_t state)
+{
+	if(led_pin == ORANGE_LED && state == LED_OFF)
+	{
+		HAL_TIM_Base_Start(&LED_TIM);
+	}
+	if(state == LED_TOGGLE)
+		HAL_GPIO_TogglePin(GPIOD, led_pin);
+
+	if(state == LED_ON)
+    	HAL_GPIO_WritePin(GPIOD, led_pin, GPIO_PIN_SET);
+
+	if(state == LED_OFF)
+    	HAL_GPIO_WritePin(GPIOD, led_pin, GPIO_PIN_RESET);
+}
+
 /* USER CODE END 4 */
 
 /**

@@ -121,6 +121,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	if(main_flag)
 	{
+		main_flag = 0;
 		msg_flag = 0;
 		char reply[MSG_MAX_LEN];
 		char cmd[3];
@@ -155,7 +156,7 @@ int main(void)
 			}
 		}
 
-		main_flag = 0;
+
 	}
   }
   /* USER CODE END 3 */
@@ -347,6 +348,16 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
+
+	// Currently there exists a bug where the master sends out a null character after initializing.
+	// This is used to capture and throw away said null character, while the bug still exists.
+	if(rx_buff[0] == 0)
+	{
+		HAL_UART_Receive_IT(huart, rx_buff, 1);
+		return;
+	}
+
+
 	// Used when message is out of sync with buffer
 	static uint8_t OOS_check = 0;
 	if(OOS_check)
