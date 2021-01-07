@@ -39,6 +39,9 @@
 #define DEBUG_UART huart2
 #define SLAVE_UART huart3
 #define MSG_TIM htim2
+
+#define debug
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -113,6 +116,7 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&SLAVE_UART, rx_buff, 1);
+  uint8_t no_slaves = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -125,16 +129,13 @@ int main(void)
     /* USER CODE BEGIN 3 */
     if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0))
     {
-    	SendMessage("2 ADR 0\n", 3000);
-
-    	if(msg_flag)
-    	{
-			HAL_UART_Transmit(&DEBUG_UART, (uint8_t*)"bericht_ontvangen: ", 19, 100);
-			HAL_UART_Transmit(&DEBUG_UART, (uint8_t*)rec_buff, strlen((int8_t*)rec_buff), 100);
-			msg_flag = 0;
-    	}
+    	SendMessage("0 ADR 1\n");
+    	if(CheckTimeout("SLAVE", 3000))
+    		no_slaves = atoi((char*)rec_buff);
     }
   }
+  __NOP(); // Should never reach here
+
   /* USER CODE END 3 */
 }
 
@@ -407,7 +408,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	// Only listens to the message if
 	if(!msg_enable)
 	{
-		HAL_UART_Receive_IT(&SLAVE_UART, rx_buff, 1);
+		HAL_UART_Receive_IT(huart, rx_buff, 1);
 		return;
 	}
 
@@ -444,15 +445,17 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	{
 		msg_i = 0;
 		if(rx_buff[0] != '\n')
+
 			OOS_check = 1;
 	}
 
 	// Reads the next byte
-	HAL_UART_Receive_IT(&SLAVE_UART, rx_buff, 1);
+	HAL_UART_Receive_IT(huart, rx_buff, 1);
 }
 
 char CheckTimeout(const char * valid_ans, int timeout)
 {
+	msg_enable = 1;
 	int tim_cnt = 0;
 	HAL_TIM_Base_Start(&MSG_TIM);
 	__HAL_TIM_CLEAR_FLAG(&MSG_TIM, TIM_FLAG_UPDATE);
@@ -468,19 +471,34 @@ char CheckTimeout(const char * valid_ans, int timeout)
 
 	HAL_TIM_Base_Stop(&MSG_TIM);
 	__HAL_TIM_SET_COUNTER(&MSG_TIM, 0);
-
+	msg_enable = 0;
 	if(msg_flag)
 	{
-		if(strstr(valid_ans, rec_buff) != NULL)
+		msg_flag = 0;
+#ifdef debug
+		HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) "Received: ", 10, 100);
+		HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) rec_buff, strlen(rec_buff), 100);
+#endif
+		if(strstr((char*)rec_buff, valid_ans) != NULL)
 			return 1;
 	}
+
+#ifdef debug
+	HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) "Faulty Message\n", 15, 100);
+#endif
+
 	return 0;		// implicit else
+
 }
 
-char SendMessage(const char * msg, uint16_t timeout)
+char SendMessage(const char * msg)
 {
-	msg_enable = 1;
-	HAL_UART_Transmit(&SLAVE_UART, (uint8_t*) msg, strlen(msg), 10);
+#ifdef debug
+	HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) "Sent: ", 6, 10);
+	HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) msg, strlen(msg), 100);
+#endif
+
+	HAL_UART_Transmit(&SLAVE_UART, (uint8_t*) msg, strlen(msg), 100);
 	return (CheckTimeout("ACK\n", 2000));
 }
 /* USER CODE END 4 */

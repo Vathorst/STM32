@@ -57,7 +57,7 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 char CheckTimeout(const char * valid_ans, int timeout);
-char SendMessage(const char * msg, uint16_t timeout);
+char SendMessage(const char * msg);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

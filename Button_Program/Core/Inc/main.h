@@ -57,6 +57,7 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 char DisectCommand(char * cmd, char * sec_adr);
+char SendMessage(UART_HandleTypeDef *huart, const char * msg);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

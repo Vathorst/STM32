@@ -33,7 +33,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define MSG_MAX_LEN 16
+#define MSG_MAX_LEN 12
+#define MASTER_UART huart2
+#define SLAVE_UART huart1
+#define MSG_TIM htim1
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -67,7 +70,9 @@ uint8_t rx_buff[1];
 uint8_t rec_buff[MSG_MAX_LEN];
 uint8_t msg_i = 0;				// Index for rec_buff
 uint8_t main_flag = 0;
-uint8_t slave_adr = 2;
+uint8_t msg_flag = 0;
+uint8_t msg_enable = 0;
+uint8_t slave_adr = 0;
 /* USER CODE END 0 */
 
 /**
@@ -102,7 +107,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_IT(&huart2, rx_buff, 1);
+  HAL_UART_Receive_IT(&MASTER_UART, rx_buff, 1);
 
   /* USER CODE END 2 */
 
@@ -115,12 +120,40 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	if(main_flag)
 	{
+		msg_flag = 0;
+		char reply[MSG_MAX_LEN];
 		char cmd[3];
 		char sec_adr;
 		char adr = DisectCommand(cmd, &sec_adr);
+		if(adr == 0)
+		{
+			if(strcmp(cmd, "ADR") == 0)
+			{
+				slave_adr = sec_adr;
+				sprintf(reply, "0 ADR %d\n", slave_adr+1);
+				if(SendMessage(&SLAVE_UART, reply) == 0)
+				{
+					__NOP();
+					sprintf(reply, "SLAVE %d\n", slave_adr);
+					SendMessage(&MASTER_UART, reply);
+					HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+				}
+			}
+		}
+		else
+		{
+			if(strcmp(cmd, "ASK") == 0 && slave_adr)
+			{
+				sprintf(reply, "ASK %d\n", slave_adr);
+				SendMessage(&MASTER_UART, reply);
+			}
+			else
+			{
 
 
-		__NOP();
+			}
+		}
+
 		main_flag = 0;
 	}
   }
@@ -184,7 +217,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 32000;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 3000;
+  htim1.Init.Period = 100;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -335,12 +368,13 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		if(rx_buff[0] == '\n')
 		{
 			msg_i = 0;
-			HAL_UART_Transmit(&huart2, (uint8_t*)"ACK\n", 4, 100);
+			if(strcmp("ACK\n", rec_buff) != 0)
+				HAL_UART_Transmit(huart, (uint8_t*)"ACK\n", 4, 100);
 
 			int msg_adr = atoi((char *)rec_buff);
 			if(msg_adr == 0 || msg_adr == slave_adr)
 			{
-
+				msg_flag = 1;
 				main_flag = 1;
 			}
 			else
@@ -365,9 +399,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	}
 
 	// Reads the next byte
-	HAL_UART_Receive_IT(&huart2, rx_buff, 1);
+	HAL_UART_Receive_IT(huart, rx_buff, 1);
 }
-
 
 char DisectCommand(char * cmd, char * sec_adr)
 {
@@ -381,6 +414,39 @@ char DisectCommand(char * cmd, char * sec_adr)
 	return adr;
 }
 
+char CheckTimeout(const char * valid_ans, int timeout)
+{
+	int tim_cnt = 0;
+	HAL_TIM_Base_Start(&MSG_TIM);
+	__HAL_TIM_CLEAR_FLAG(&MSG_TIM, TIM_FLAG_UPDATE);
+
+	while(msg_flag == 0 && tim_cnt < (int)((float)timeout/100))
+	{
+		if(__HAL_TIM_GET_FLAG(&MSG_TIM, TIM_FLAG_UPDATE))
+		{
+			tim_cnt++;
+			__HAL_TIM_CLEAR_FLAG(&MSG_TIM, TIM_FLAG_UPDATE);
+		}
+	}
+
+	HAL_TIM_Base_Stop(&MSG_TIM);
+	__HAL_TIM_SET_COUNTER(&MSG_TIM, 0);
+	if(msg_flag)
+	{
+		msg_flag = 0;
+		if(strstr(valid_ans, (char*)rec_buff) != NULL)
+			return 1;
+	}
+	return 0;		// implicit else
+
+}
+
+char SendMessage(UART_HandleTypeDef *huart, const char * msg)
+{
+	if(HAL_UART_Transmit(huart, (uint8_t*) msg, strlen(msg), 100) != HAL_OK)
+		__NOP();
+	return (CheckTimeout("ACK\n", 500));
+}
 /* USER CODE END 4 */
 
 /**
