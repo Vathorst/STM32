@@ -39,7 +39,7 @@
 #define DEBUG_UART huart2
 #define SLAVE_UART huart3
 #define MSG_TIM htim2
-
+#define ACK_TIMEOUT 500
 #define debug
 
 /* USER CODE END PD */
@@ -129,9 +129,15 @@ int main(void)
     /* USER CODE BEGIN 3 */
     if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0))
     {
-    	SendMessage("0 ADR 1\n");
-    	if(CheckTimeout("SLAVE", 3000))
-    		no_slaves = atoi((char*)rec_buff);
+    	if(SendMessage("0 ADR 1\n"))
+    	{
+    		if(CheckTimeout("SLAVE", ACK_TIMEOUT*2))
+    			no_slaves = atoi((char*)rec_buff);
+    		else
+    			continue;
+    	}
+    	else
+    		continue;
     }
   }
   __NOP(); // Should never reach here
@@ -455,11 +461,16 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 char CheckTimeout(const char * valid_ans, int timeout)
 {
-	msg_enable = 1;
-	int tim_cnt = 0;
+	msg_enable = 1;		// Allows communication to the master
+	int tim_cnt = 0;	// Keeps a count of how many times the timer updated, this happens every 100ms
+
+	// Starts the timer for the timeout function.
+	// Clears flag as a precaution
 	HAL_TIM_Base_Start(&MSG_TIM);
 	__HAL_TIM_CLEAR_FLAG(&MSG_TIM, TIM_FLAG_UPDATE);
 
+	// When a message has been received "msg_flag" will be 1
+	// This loop will count for "timeout" milliseconds
 	while(msg_flag == 0 && tim_cnt < (int)((float)timeout/100))
 	{
 		if(__HAL_TIM_GET_FLAG(&MSG_TIM, TIM_FLAG_UPDATE))
@@ -469,24 +480,34 @@ char CheckTimeout(const char * valid_ans, int timeout)
 		}
 	}
 
+	// Stops the timer and resets the counter
 	HAL_TIM_Base_Stop(&MSG_TIM);
 	__HAL_TIM_SET_COUNTER(&MSG_TIM, 0);
+
+	// Disables any other incoming messages
 	msg_enable = 0;
+
+	// Reads the incoming message (if received), and compares it to the expected answer
 	if(msg_flag)
 	{
 		msg_flag = 0;
 #ifdef debug
 		HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) "Received: ", 10, 100);
-		HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) rec_buff, strlen(rec_buff), 100);
+		HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) rec_buff, strlen((char*)rec_buff), 100);
 #endif
 		if(strstr((char*)rec_buff, valid_ans) != NULL)
 			return 1;
-	}
-
 #ifdef debug
-	HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) "Faulty Message\n", 15, 100);
+		else
+			HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) "Wrong Answer\n", 13, 100);
+#endif
+	}
+#ifdef debug
+	else
+		HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) "Timeout\n", 8, 100);
 #endif
 
+	// if the earlier return statement didn't fire, return 0, indicating either a timeout or a wrong answer
 	return 0;		// implicit else
 
 }
@@ -498,8 +519,10 @@ char SendMessage(const char * msg)
 	HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) msg, strlen(msg), 100);
 #endif
 
+	// Every message sent requires "ACK\n" as an answer.
+	// Master only sends messages to slaves this way, as the screen doesn't require acknowledgement
 	HAL_UART_Transmit(&SLAVE_UART, (uint8_t*) msg, strlen(msg), 100);
-	return (CheckTimeout("ACK\n", 2000));
+	return (CheckTimeout("ACK\n", ACK_TIMEOUT));
 }
 /* USER CODE END 4 */
 

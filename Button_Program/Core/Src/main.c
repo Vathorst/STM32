@@ -37,6 +37,7 @@
 #define MASTER_UART huart2
 #define SLAVE_UART huart1
 #define MSG_TIM htim1
+#define ACK_TIMEOUT 500
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -368,7 +369,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		if(rx_buff[0] == '\n')
 		{
 			msg_i = 0;
-			if(strcmp("ACK\n", rec_buff) != 0)
+			if(strcmp("ACK\n", (char*)rec_buff) != 0)
 				HAL_UART_Transmit(huart, (uint8_t*)"ACK\n", 4, 100);
 
 			int msg_adr = atoi((char *)rec_buff);
@@ -443,9 +444,8 @@ char CheckTimeout(const char * valid_ans, int timeout)
 
 char SendMessage(UART_HandleTypeDef *huart, const char * msg)
 {
-	if(HAL_UART_Transmit(huart, (uint8_t*) msg, strlen(msg), 100) != HAL_OK)
-		__NOP();
-	return (CheckTimeout("ACK\n", 500));
+	HAL_UART_Transmit(huart, (uint8_t*) msg, strlen(msg), 100);
+	return (CheckTimeout("ACK\n", ACK_TIMEOUT));
 }
 /* USER CODE END 4 */
 
