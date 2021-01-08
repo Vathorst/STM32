@@ -224,7 +224,8 @@ void TIM5_IRQHandler(void)
   HAL_TIM_IRQHandler(&htim5);
   /* USER CODE BEGIN TIM5_IRQn 1 */
   HAL_GPIO_WritePin(GPIOD, LD3_Pin, GPIO_PIN_RESET);
-  HAL_TIM_Base_Stop(&htim5);
+  __HAL_RCC_TIM5_CLK_DISABLE();
+
   /* USER CODE END TIM5_IRQn 1 */
 }
 

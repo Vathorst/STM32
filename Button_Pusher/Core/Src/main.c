@@ -45,6 +45,7 @@
 
 #define ACK_TIMEOUT 500
 
+#define LED_BLINK 3
 #define LED_TOGGLE 2
 #define LED_ON 1
 #define LED_OFF 0
@@ -144,6 +145,8 @@ int main(void)
   MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&SLAVE_UART, rx_buff, 1);
+  HAL_TIM_Base_Start_IT(&LED_TIM);
+
   uint8_t no_slaves = 0;
   enum state_t state = STATE_STR;
   uint16_t mode = 360;
@@ -173,22 +176,19 @@ int main(void)
     	break;
 
     case STATE_ADR:
-    	SetLed(ORANGE_LED, LED_OFF);
+    	//SetLed(ORANGE_LED, LED_OFF);
     	if(SendMessage("0 ADR 1\n"))
     	{
     		if(CheckTimeout("SLAVE", ACK_TIMEOUT*2))
     		{
     			no_slaves = atoi((char*)rec_buff);
     			state = STATE_CHS;
-    		}
-    		else
-    		{
-    			SetLed(ORANGE_LED, LED_ON);
-    			state = STATE_STR;
+    			break;
     		}
     	}
-		else
-			state = STATE_STR;
+		SetLed(ORANGE_LED, LED_ON);
+		state = STATE_STR;
+
     	break;
 
     case STATE_CHS:
@@ -343,9 +343,9 @@ static void MX_TIM5_Init(void)
 
   /* USER CODE END TIM5_Init 1 */
   htim5.Instance = TIM5;
-  htim5.Init.Prescaler = 42000;
+  htim5.Init.Prescaler = 41999;
   htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim5.Init.Period = 500;
+  htim5.Init.Period = 200;
   htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
@@ -570,6 +570,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		if(msg_i == 0)
 			memset(rec_buff, 0, sizeof(rec_buff));
 
+    	SetLed(ORANGE_LED, LED_BLINK);
+
 		rec_buff[msg_i] = rx_buff[0];
 		if(rx_buff[0] == '\n')
 		{
@@ -658,16 +660,13 @@ char SendMessage(const char * msg)
 
 	// Every message sent requires "ACK\n" as an answer.
 	// Master only sends messages to slaves this way, as the screen doesn't require acknowledgement
+	SetLed(ORANGE_LED, LED_BLINK);
 	HAL_UART_Transmit(&SLAVE_UART, (uint8_t*) msg, strlen(msg), 100);
 	return (CheckTimeout("ACK\n", ACK_TIMEOUT));
 }
 
 void SetLed(uint16_t led_pin, uint8_t state)
 {
-	if(led_pin == ORANGE_LED && state == LED_OFF)
-	{
-		HAL_TIM_Base_Start(&LED_TIM);
-	}
 	if(state == LED_TOGGLE)
 		HAL_GPIO_TogglePin(GPIOD, led_pin);
 
@@ -676,6 +675,14 @@ void SetLed(uint16_t led_pin, uint8_t state)
 
 	if(state == LED_OFF)
     	HAL_GPIO_WritePin(GPIOD, led_pin, GPIO_PIN_RESET);
+
+	if(led_pin == ORANGE_LED && state == LED_BLINK)
+	{
+		HAL_GPIO_WritePin(GPIOD, led_pin, GPIO_PIN_SET);
+		__HAL_RCC_TIM5_CLK_ENABLE();
+		HAL_TIM_Base_Start_IT(&LED_TIM);
+		__HAL_TIM_SET_COUNTER(&LED_TIM, 0);
+	}
 }
 
 /* USER CODE END 4 */
