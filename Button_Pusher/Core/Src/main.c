@@ -154,6 +154,11 @@ int main(void)
   uint8_t chosen_button = 0;
   char buf[12];
 
+  // Srand  needs a seed that differs each startup, no ideas for this have yet been implemented
+  // Not as important, as the MCU won't be reset every time a person plays.
+  // When the device loses and regains power however, the button sequence will always be the same
+  srand(1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -181,7 +186,7 @@ int main(void)
     	{
     		if(CheckTimeout("SLAVE", ACK_TIMEOUT*2))
     		{
-    			no_slaves = atoi((char*)rec_buff);
+    			no_slaves = atoi((char*)&rec_buff[6]);
     			state = STATE_CHS;
     			break;
     		}
@@ -193,7 +198,9 @@ int main(void)
 
     case STATE_CHS:
     	//TODO: print score
-    	chosen_button = rand() % (mode == 360 ? no_slaves : no_slaves >> 1);
+    	SetLed(RED_LED, LED_OFF);
+    	chosen_button = (rand() % (mode == 360 ? no_slaves : no_slaves >> 1))+1;
+
     	state = STATE_CTR;
     	break;
 
@@ -204,28 +211,44 @@ int main(void)
     	{
     		if(CheckTimeout("PRESSED", 5000-(score*100)))
     		{
-    			if(atoi((char*)rec_buff) == chosen_button)
+    			if(atoi((char*)&rec_buff[8]) == chosen_button)
     			{
-    				SendMessage("0 OFF");
     				state = STATE_CHS;
     				score++;
     			}
+    			else
+    				state = STATE_END;
     		}
     		else
-    		{
-    			state = STATE_STR;
-    		}
+    			state = STATE_ERR;
+
+    		SendMessage("0 OFF");
     	}
     	else
+    	{
+    		SetLed(RED_LED, LED_ON);
     		state = STATE_ERR;
+    	}
     	break;
 
     case STATE_ERR:
-
+    	sprintf(buf, "%d ASK\n", chosen_button);
+    	if(SendMessage((char*)buf))
+    	{
+    		if(CheckTimeout("ANS", ACK_TIMEOUT))
+    		{
+    			if(atoi((char*)&rec_buff[4]) != chosen_button)
+    				SetLed(RED_LED, LED_ON);
+    		}
+    	}
+    	state = STATE_END;
     	break;
 
     case STATE_END:
-
+    	//TODO: Print score
+    	HAL_Delay(500); // Currently delay of 500ms, real delay should be 10 seconds
+    	score = 0;
+    	state = STATE_STR;
     	break;
 
     default:
