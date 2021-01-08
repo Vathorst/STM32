@@ -98,6 +98,7 @@ void MX_USB_HOST_Process(void);
 /* USER CODE BEGIN PFP */
 char CheckTimeout(const char * valid_ans, int timeout);
 char SendMessage(const char * msg);
+char SendCommand(const char * cmd, const char * ans, int timeout);
 void SetLed(uint16_t led_pin, uint8_t state);
 /* USER CODE END PFP */
 
@@ -182,17 +183,29 @@ int main(void)
 
     case STATE_ADR:
     	//SetLed(ORANGE_LED, LED_OFF);
-    	if(SendMessage("0 ADR 1\n"))
+    	if(SendCommand("0 ADR 1\n","SLAVE", ACK_TIMEOUT*2))
     	{
-    		if(CheckTimeout("SLAVE", ACK_TIMEOUT*2))
-    		{
-    			no_slaves = atoi((char*)&rec_buff[6]);
-    			state = STATE_CHS;
-    			break;
-    		}
+    		no_slaves = atoi((char*)&rec_buff[6]);
+    		state = STATE_CHS;
     	}
-		SetLed(ORANGE_LED, LED_ON);
-		state = STATE_STR;
+    	else
+    	{
+    		SetLed(ORANGE_LED, LED_ON);
+    		state = STATE_STR;
+    	}
+    	break;
+
+//    	if(SendMessage("0 ADR 1\n"))
+//    	{
+//    		if(CheckTimeout("SLAVE", ACK_TIMEOUT*2))
+//    		{
+//    			no_slaves = atoi((char*)&rec_buff[6]);
+//    			state = STATE_CHS;
+//    			break;
+//    		}
+//    	}
+//		SetLed(ORANGE_LED, LED_ON);
+//		state = STATE_STR;
 
     	break;
 
@@ -207,41 +220,63 @@ int main(void)
     case STATE_CTR:
 
     	sprintf(buf, "0 ON %d\n", chosen_button);
-    	if(SendMessage((char*)buf))
+    	if(SendCommand(buf, "PRESSED", 5000-(score*100)))
     	{
-    		if(CheckTimeout("PRESSED", 5000-(score*100)))
+    		if(atoi((char*)&rec_buff[8]) == chosen_button)
     		{
-    			if(atoi((char*)&rec_buff[8]) == chosen_button)
-    			{
-    				state = STATE_CHS;
-    				score++;
-    			}
-    			else
-    				state = STATE_END;
+				state = STATE_CHS;
+				score++;
     		}
     		else
-    			state = STATE_ERR;
-
-    		SendMessage("0 OFF");
+    			state = STATE_END;
     	}
     	else
-    	{
-    		SetLed(RED_LED, LED_ON);
     		state = STATE_ERR;
-    	}
+
+    	SendMessage("0 OFF");
+
+//    	if(SendMessage((char*)buf))
+//    	{
+//    		if(CheckTimeout("PRESSED", 5000-(score*100)))
+//    		{
+//    			if(atoi((char*)&rec_buff[8]) == chosen_button)
+//    			{
+//    				state = STATE_CHS;
+//    				score++;
+//    			}
+//    			else
+//    				state = STATE_END;
+//    		}
+//    		else
+//    			state = STATE_ERR;
+//
+//    		SendMessage("0 OFF");
+//    	}
+//    	else
+//    	{
+//    		SetLed(RED_LED, LED_ON);
+//    		state = STATE_ERR;
+//    	}
     	break;
 
     case STATE_ERR:
+    	SetLed(RED_LED, LED_ON);
     	sprintf(buf, "%d ASK\n", chosen_button);
-    	if(SendMessage((char*)buf))
+    	if(SendCommand(buf, "ANS", ACK_TIMEOUT))
     	{
-    		if(CheckTimeout("ANS", ACK_TIMEOUT))
-    		{
-    			if(atoi((char*)&rec_buff[4]) != chosen_button)
-    				SetLed(RED_LED, LED_ON);
-    		}
+			if(atoi((char*)&rec_buff[4]) == chosen_button)
+				SetLed(RED_LED, LED_OFF);
     	}
     	state = STATE_END;
+//    	if(SendMessage((char*)buf))
+//    	{
+//    		if(CheckTimeout("ANS", ACK_TIMEOUT))
+//    		{
+//    			if(atoi((char*)&rec_buff[4]) != chosen_button)
+//    				SetLed(RED_LED, LED_ON);
+//    		}
+//    	}
+//    	state = STATE_END;
     	break;
 
     case STATE_END:
@@ -686,6 +721,23 @@ char SendMessage(const char * msg)
 	SetLed(ORANGE_LED, LED_BLINK);
 	HAL_UART_Transmit(&SLAVE_UART, (uint8_t*) msg, strlen(msg), 100);
 	return (CheckTimeout("ACK\n", ACK_TIMEOUT));
+}
+
+char SendCommand(const char * cmd, const char * ans, int timeout)
+{
+	if(SendMessage(cmd))
+	{
+		if(ans != NULL)
+		{
+			if(CheckTimeout(ans, timeout))
+			{
+				return 1;
+			}
+		}
+		else
+			return 1;
+	}
+	return 0;
 }
 
 void SetLed(uint16_t led_pin, uint8_t state)
