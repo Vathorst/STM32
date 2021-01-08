@@ -212,7 +212,8 @@ int main(void)
     case STATE_CHS:
     	//TODO: print score
     	SetLed(RED_LED, LED_OFF);
-    	chosen_button = (rand() % (mode == 360 ? no_slaves : no_slaves >> 1))+1;
+    	if(no_slaves)
+    		chosen_button = (rand() % (mode == 360 ? no_slaves : no_slaves >> 1))+1;
 
     	state = STATE_CTR;
     	break;
