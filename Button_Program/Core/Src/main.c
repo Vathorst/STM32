@@ -68,6 +68,7 @@ static void MX_TIM1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint8_t rx_buff[1];
+uint8_t tx_debug[12];
 uint8_t rec_buff[MSG_MAX_LEN];
 uint8_t msg_i = 0;				// Index for rec_buff
 uint8_t main_flag = 0;
@@ -124,7 +125,7 @@ int main(void)
 		main_flag = 0;
 		msg_flag = 0;
 		char reply[MSG_MAX_LEN];
-		char cmd[3];
+		char cmd[4];
 		char sec_adr;
 		char adr = DisectCommand(cmd, &sec_adr);
 		if(adr == 0)
@@ -135,25 +136,38 @@ int main(void)
 				sprintf(reply, "0 ADR %d\n", slave_adr+1);
 				if(SendMessage(&SLAVE_UART, reply) == 0)
 				{
-					__NOP();
 					sprintf(reply, "SLAVE %d\n", slave_adr);
 					SendMessage(&MASTER_UART, reply);
-					HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+
+					__NOP();
 				}
+				__NOP();
+			}
+			if(strcmp(cmd, "ON") == 0)
+			{
+				sprintf(reply, "0 ON %d", sec_adr);
+				HAL_UART_Transmit(huart, (uint8_t*) reply, strlen(reply), 100);
+				if(sec_adr == slave_adr)
+					HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+
 			}
 		}
 		else
 		{
-			if(strcmp(cmd, "ASK") == 0 && slave_adr)
+			if(strcmp((char*)cmd, "ASK") == 0)
 			{
+
 				sprintf(reply, "ANS %d\n", slave_adr);
+				HAL_Delay(50);
 				SendMessage(&MASTER_UART, reply);
+				__NOP();
 			}
 			else
 			{
 
 
 			}
+			__NOP();
 		}
 
 
@@ -371,8 +385,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	{
 		// Once a new message has started, delete the old message
 		if(msg_i == 0)
+		{
+			msg_flag = 0;
 			memset(rec_buff, 0, sizeof(rec_buff));
-
+		}
 		// Copying of new byte
 		rec_buff[msg_i] = rx_buff[0];
 
@@ -393,17 +409,21 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 			// Compares the message address the the address of the slave
 			int msg_adr = atoi((char *)rec_buff);
-			if(msg_adr == 0 || msg_adr == slave_adr)
+			if(huart == &MASTER_UART)
 			{
+				if(msg_adr == 0 || msg_adr == slave_adr)
+				{
+					msg_flag = 1;
+					main_flag = 1;
+				}
+				else
+				{
+					HAL_UART_Transmit(&SLAVE_UART, (uint8_t*)rec_buff, strlen((char*)rec_buff), 100);
+					__NOP();
+				}
+			}
+			if(strcmp("ACK\n", (char*)rec_buff) == 0)
 				msg_flag = 1;
-				main_flag = 1;
-			}
-			else
-			{
-				HAL_UART_Transmit(&SLAVE_UART, (uint8_t*)rec_buff, strlen((char*)rec_buff), 100);
-				__NOP();
-			}
-
 		}
 		else
 		{
@@ -433,8 +453,9 @@ char DisectCommand(char * cmd, char * sec_adr)
 	char adr = atoi(strtok((char*)rec_buff, " "));
 	cmd_tok = strtok(NULL, " ");
 	*sec_adr = atoi(strtok(NULL, " "));
-	sprintf(cmd, "%s", cmd_tok);
 
+	sprintf(cmd, "%s", cmd_tok);
+	cmd[3] = '\0';
 	return adr;
 }
 
@@ -477,7 +498,9 @@ char CheckTimeout(const char * valid_ans, int timeout)
 
 char SendMessage(UART_HandleTypeDef *huart, const char * msg)
 {
-	HAL_UART_Transmit(huart, (uint8_t*) msg, strlen(msg), 100);
+	strcpy((char*)tx_debug, msg);
+	if(HAL_UART_Transmit(huart, (uint8_t*) msg, strlen(msg), 100) != HAL_OK)
+		__NOP();
 	return (CheckTimeout("ACK\n", ACK_TIMEOUT));
 }
 /* USER CODE END 4 */

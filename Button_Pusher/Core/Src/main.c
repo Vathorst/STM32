@@ -105,6 +105,7 @@ void SetLed(uint16_t led_pin, uint8_t state);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 	uint8_t rx_buff[1];
+	uint8_t tx_debug[12];	// Used only for debugging
 	uint8_t rec_buff[MSG_MAX_LEN];
 	uint8_t msg_i = 0;				// Index for rec_buff
 	uint8_t msg_flag = 0;
@@ -221,7 +222,7 @@ int main(void)
     case STATE_CTR:
 
     	sprintf(buf, "0 ON %d\n", chosen_button);
-    	if(SendCommand(buf, "PRESSED", 5000-(score*100)))
+    	if(SendCommand(buf, "PRESSED", 500/*5000-(score*100)*/))
     	{
     		if(atoi((char*)&rec_buff[8]) == chosen_button)
     		{
@@ -230,11 +231,12 @@ int main(void)
     		}
     		else
     			state = STATE_END;
+    		SendMessage("0 OFF\n");
     	}
     	else
     		state = STATE_ERR;
 
-    	SendMessage("0 OFF");
+
 
 //    	if(SendMessage((char*)buf))
 //    	{
@@ -261,13 +263,15 @@ int main(void)
     	break;
 
     case STATE_ERR:
-    	SetLed(RED_LED, LED_ON);
+
     	sprintf(buf, "%d ASK\n", chosen_button);
-    	if(SendCommand(buf, "ANS", ACK_TIMEOUT))
+    	if(SendCommand(buf, "ANS", ACK_TIMEOUT*2))
     	{
 			if(atoi((char*)&rec_buff[4]) == chosen_button)
 				SetLed(RED_LED, LED_OFF);
     	}
+    	else
+    		SetLed(RED_LED, LED_ON);
     	state = STATE_END;
 //    	if(SendMessage((char*)buf))
 //    	{
@@ -634,6 +638,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		rec_buff[msg_i] = rx_buff[0];
 		if(rx_buff[0] == '\n')
 		{
+			if(huart == &SLAVE_UART && strcmp("ACK\n", (char*)rec_buff) != 0)
+				HAL_UART_Transmit(&SLAVE_UART, (uint8_t*)"ACK\n", 4, 100);
 			msg_i = 0;
 			msg_flag = 1;
 		}
@@ -720,6 +726,7 @@ char SendMessage(const char * msg)
 	// Every message sent requires "ACK\n" as an answer.
 	// Master only sends messages to slaves this way, as the screen doesn't require acknowledgement
 	SetLed(ORANGE_LED, LED_BLINK);
+	strcpy((char*)tx_debug, (char*)msg);
 	HAL_UART_Transmit(&SLAVE_UART, (uint8_t*) msg, strlen(msg), 100);
 	return (CheckTimeout("ACK\n", ACK_TIMEOUT));
 }
