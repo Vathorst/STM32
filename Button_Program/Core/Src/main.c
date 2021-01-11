@@ -147,29 +147,45 @@ int main(void)
 			}
 			else if(strcmp(cmd, "ON") == 0)
 			{
+				// Sends message over to the next slave
 				sprintf(reply, "0 ON %d\n", sec_adr);
 				HAL_UART_Transmit(&SLAVE_UART, (uint8_t*) reply, strlen(reply), 100);
+
+				// LED is low-active with pin C13
 				if(sec_adr == slave_adr)
-				{
 					HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-				}
+
+				// Checks if the button is being pressed
 				char pressed = 0;
-				while(pressed == GPIO_PIN_RESET && strcmp(rec_buff, "0 OFF\n") != 0)
+				while(pressed == GPIO_PIN_RESET && strcmp((char*)rec_buff, "0 OFF\n") != 0)
 				{
 					pressed = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
 				}
+
+				// Waits until the button is released
 				while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1));
+
+				// Forwards the message to neighbour.
+				// Would be neater if this was done during the callback
 				if(strcmp(rec_buff, "0 OFF\n") == 0)
 				{
 					SendMessage(&SLAVE_UART, "0 OFF\n");
 				}
+
+				// Only check if the button has been pressed if no message has been received yet.
+				// Uses Transmit instead of SendMessage because master communication doesn't need ACK
 				else if(pressed)
 				{
 					sprintf(reply, "PRESSED %d\n", slave_adr);
 					HAL_UART_Transmit(&MASTER_UART, (uint8_t*) reply, strlen(reply), 100);
 				}
+
+				// Turns the LED off (low-active)
 				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 			}
+
+			// If the button was pressed, process wont be in the forwarding mode
+			// Would be neater if this was done in callback function
 			else if(strcmp(cmd, "OFF") == 0)
 			{
 				SendMessage(&SLAVE_UART, "0 OFF\n");
@@ -179,11 +195,9 @@ int main(void)
 		{
 			if(strcmp((char*)cmd, "ASK") == 0)
 			{
-
 				sprintf(reply, "ANS %d\n", slave_adr);
-				HAL_Delay(50);
+				HAL_Delay(50); 					// The delay is because master doesn't always catch the message in time.
 				SendMessage(&MASTER_UART, reply);
-				__NOP();
 			}
 			else
 			{
