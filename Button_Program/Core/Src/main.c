@@ -111,6 +111,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&MASTER_UART, rx_buff, 1);
   HAL_UART_Receive_IT(&SLAVE_UART, rx_buff, 1);
+  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -122,6 +123,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	if(main_flag)
 	{
+
 		main_flag = 0;
 		msg_flag = 0;
 		char reply[MSG_MAX_LEN];
@@ -143,13 +145,34 @@ int main(void)
 				}
 				__NOP();
 			}
-			if(strcmp(cmd, "ON") == 0)
+			else if(strcmp(cmd, "ON") == 0)
 			{
-				sprintf(reply, "0 ON %d", sec_adr);
-				HAL_UART_Transmit(huart, (uint8_t*) reply, strlen(reply), 100);
+				sprintf(reply, "0 ON %d\n", sec_adr);
+				HAL_UART_Transmit(&SLAVE_UART, (uint8_t*) reply, strlen(reply), 100);
 				if(sec_adr == slave_adr)
-					HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
-
+				{
+					HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+				}
+				char pressed = 0;
+				while(pressed == GPIO_PIN_RESET && strcmp(rec_buff, "0 OFF\n") != 0)
+				{
+					pressed = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
+				}
+				while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1));
+				if(strcmp(rec_buff, "0 OFF\n") == 0)
+				{
+					SendMessage(&SLAVE_UART, "0 OFF\n");
+				}
+				else if(pressed)
+				{
+					sprintf(reply, "PRESSED %d\n", slave_adr);
+					HAL_UART_Transmit(&MASTER_UART, (uint8_t*) reply, strlen(reply), 100);
+				}
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+			}
+			else if(strcmp(cmd, "OFF") == 0)
+			{
+				SendMessage(&SLAVE_UART, "0 OFF\n");
 			}
 		}
 		else
@@ -340,9 +363,6 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
-
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -352,9 +372,8 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PA1 */
   GPIO_InitStruct.Pin = GPIO_PIN_1;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }
@@ -362,7 +381,6 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-
 	// Currently there exists a bug where the master sends out a null character after initializing.
 	// This is used to capture and throw away said null character, while the bug still exists.
 	if(rx_buff[0] == 0)
@@ -370,7 +388,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		HAL_UART_Receive_IT(huart, rx_buff, 1);
 		return;
 	}
-
 
 	// Used when message is out of sync with buffer
 	static uint8_t OOS_check = 0;
@@ -406,7 +423,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 				HAL_UART_Transmit(&MASTER_UART, (uint8_t*)rec_buff, strlen((char*)rec_buff), 100);
 				__NOP();
 			}
-
 			// Compares the message address the the address of the slave
 			int msg_adr = atoi((char *)rec_buff);
 			if(huart == &MASTER_UART)

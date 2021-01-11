@@ -196,20 +196,6 @@ int main(void)
     	}
     	break;
 
-//    	if(SendMessage("0 ADR 1\n"))
-//    	{
-//    		if(CheckTimeout("SLAVE", ACK_TIMEOUT*2))
-//    		{
-//    			no_slaves = atoi((char*)&rec_buff[6]);
-//    			state = STATE_CHS;
-//    			break;
-//    		}
-//    	}
-//		SetLed(ORANGE_LED, LED_ON);
-//		state = STATE_STR;
-
-    	break;
-
     case STATE_CHS:
     	//TODO: print score
     	SetLed(RED_LED, LED_OFF);
@@ -220,9 +206,8 @@ int main(void)
     	break;
 
     case STATE_CTR:
-
     	sprintf(buf, "0 ON %d\n", chosen_button);
-    	if(SendCommand(buf, "PRESSED", 500/*5000-(score*100)*/))
+    	if(SendCommand(buf, "PRESSED", 5000-(score*100)))
     	{
     		if(atoi((char*)&rec_buff[8]) == chosen_button)
     		{
@@ -231,35 +216,10 @@ int main(void)
     		}
     		else
     			state = STATE_END;
-    		SendMessage("0 OFF\n");
     	}
     	else
     		state = STATE_ERR;
-
-
-
-//    	if(SendMessage((char*)buf))
-//    	{
-//    		if(CheckTimeout("PRESSED", 5000-(score*100)))
-//    		{
-//    			if(atoi((char*)&rec_buff[8]) == chosen_button)
-//    			{
-//    				state = STATE_CHS;
-//    				score++;
-//    			}
-//    			else
-//    				state = STATE_END;
-//    		}
-//    		else
-//    			state = STATE_ERR;
-//
-//    		SendMessage("0 OFF");
-//    	}
-//    	else
-//    	{
-//    		SetLed(RED_LED, LED_ON);
-//    		state = STATE_ERR;
-//    	}
+    	SendMessage("0 OFF\n");
     	break;
 
     case STATE_ERR:
@@ -273,15 +233,6 @@ int main(void)
     	else
     		SetLed(RED_LED, LED_ON);
     	state = STATE_END;
-//    	if(SendMessage((char*)buf))
-//    	{
-//    		if(CheckTimeout("ANS", ACK_TIMEOUT))
-//    		{
-//    			if(atoi((char*)&rec_buff[4]) != chosen_button)
-//    				SetLed(RED_LED, LED_ON);
-//    		}
-//    	}
-//    	state = STATE_END;
     	break;
 
     case STATE_END:
@@ -611,7 +562,7 @@ static void MX_GPIO_Init(void)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	// Master has defined answers its looking for
-	// Only listens to the message if
+	// Only listens to the message if a command has been sent
 	if(!msg_enable)
 	{
 		HAL_UART_Receive_IT(huart, rx_buff, 1);
