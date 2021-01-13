@@ -64,7 +64,7 @@ enum state_t {
 	STATE_END,
 };
 
-#define debug
+//#define debug
 
 /* USER CODE END PD */
 
@@ -220,6 +220,7 @@ int main(void)
     	else
     		state = STATE_ERR;
     	SendMessage("0 OFF\n");
+    	HAL_Delay(250);
     	break;
 
     case STATE_ERR:
@@ -321,7 +322,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 42000;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 200;
+  htim2.Init.Period = 100;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
