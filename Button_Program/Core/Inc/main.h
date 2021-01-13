@@ -52,13 +52,15 @@ extern "C" {
 
 /* USER CODE END EM */
 
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 char DisectCommand(char * cmd, char * sec_adr);
 char SendMessage(UART_HandleTypeDef *huart, const char * msg);
-
+char CheckButton();
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
