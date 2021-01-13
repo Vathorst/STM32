@@ -28,15 +28,22 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef struct {
+	uint8_t msg_i;
+	uint8_t msg_flag;
+	uint8_t rec_buff[MSG_MAX_LEN];
+	UART_HandleTypeDef * used_huart;
+}t_module;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define MSG_MAX_LEN 12
 
 #define MASTER_UART huart2
 #define SLAVE_UART huart1
+
+#define MASTER_I 0
+#define SLAVE_I 1
 
 #define SPEAKER_TIM htim2
 #define MSG_TIM htim1
@@ -75,12 +82,13 @@ static void MX_TIM2_Init(void);
 /* USER CODE BEGIN 0 */
 uint8_t rx_buff[1];
 uint8_t tx_debug[12];
-uint8_t rec_buff[MSG_MAX_LEN];
-uint8_t msg_i = 0;				// Index for rec_buff
+//uint8_t rec_buff[MSG_MAX_LEN];
+//uint8_t msg_i = 0;				// Index for rec_buff
 uint8_t main_flag = 0;
-uint8_t msg_flag = 0;
-uint8_t msg_enable = 0;
+//uint8_t msg_flag = 0;
 uint8_t slave_adr = 0;
+
+t_module m_buff[2];
 /* USER CODE END 0 */
 
 /**
@@ -116,6 +124,8 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+  m_buff[0].used_huart = &MASTER_UART;
+  m_buff[1].used_huart = &SLAVE_UART;
 
   HAL_UART_Receive_IT(&MASTER_UART, rx_buff, 1);
   HAL_UART_Receive_IT(&SLAVE_UART, rx_buff, 1);
@@ -133,7 +143,7 @@ int main(void)
 	{
 
 		main_flag = 0;
-		msg_flag = 0;
+		m_buff[MASTER_I].msg_flag = 0;
 		char reply[MSG_MAX_LEN];
 		char cmd[4];
 		char sec_adr;
@@ -144,10 +154,10 @@ int main(void)
 			{
 				slave_adr = sec_adr;
 				sprintf(reply, "0 ADR %d\n", slave_adr+1);
-				if(SendMessage(&SLAVE_UART, reply) == 0)
+				if(SendMessage(SLAVE_I, reply) == 0)
 				{
 					sprintf(reply, "SLAVE %d\n", slave_adr);
-					SendMessage(&MASTER_UART, reply);
+					SendMessage(MASTER_I, reply);
 
 					__NOP();
 				}
@@ -164,9 +174,10 @@ int main(void)
 					HAL_TIM_PWM_Start(&SPEAKER_TIM, TIM_CHANNEL_1);
 					HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 				}
+
 				// Checks if the button is being pressed
 				char pressed = 0;
-				while(pressed == GPIO_PIN_RESET && strcmp((char*)rec_buff, "0 OFF\n") != 0)
+				while(pressed == GPIO_PIN_RESET && strcmp((char*)m_buff[MASTER_I].rec_buff, "0 OFF\n") != 0)
 				{
 					pressed = CheckButton();
 				}
@@ -176,9 +187,9 @@ int main(void)
 
 				// Forwards the message to neighbour.
 				// Would be neater if this was done during the callback
-				if(strcmp(rec_buff, "0 OFF\n") == 0)
+				if(strcmp((char*)m_buff[MASTER_I].rec_buff, "0 OFF\n") == 0)
 				{
-					SendMessage(&SLAVE_UART, "0 OFF\n");
+					SendMessage(SLAVE_I, "0 OFF\n");
 				}
 
 				// Only check if the button has been pressed if no message has been received yet.
@@ -198,7 +209,7 @@ int main(void)
 			// Would be neater if this was done in callback function
 			else if(strcmp(cmd, "OFF") == 0)
 			{
-				SendMessage(&SLAVE_UART, "0 OFF\n");
+				SendMessage(SLAVE_I, "0 OFF\n");
 			}
 		}
 		else
@@ -207,7 +218,7 @@ int main(void)
 			{
 				sprintf(reply, "ANS %d\n", slave_adr);
 				HAL_Delay(50); 					// The delay is because master doesn't always catch the message in time.
-				SendMessage(&MASTER_UART, reply);
+				SendMessage(MASTER_I, reply);
 			}
 			else
 			{
@@ -471,6 +482,16 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
+	uint8_t ix;
+	if(huart == m_buff[MASTER_I].used_huart)
+		ix = MASTER_I;
+	else if(huart == m_buff[SLAVE_I].used_huart)
+		ix = SLAVE_I;
+	else
+	{
+		HAL_UART_Receive_IT(huart, rx_buff, 1);
+		return;
+	}
 	// Currently there exists a bug where the master sends out a null character after initializing.
 	// This is used to capture and throw away said null character, while the bug still exists.
 	if(rx_buff[0] == 0)
@@ -488,52 +509,52 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	}
 
 	// Places new byte into global array
-	else if(msg_i < MSG_MAX_LEN)
+	else if(m_buff[ix].msg_i < MSG_MAX_LEN)
 	{
 		// Once a new message has started, delete the old message
-		if(msg_i == 0)
+		if(m_buff[ix].msg_i == 0)
 		{
-			msg_flag = 0;
-			memset(rec_buff, 0, sizeof(rec_buff));
+			m_buff[ix].msg_flag = 0;
+			memset(m_buff[ix].rec_buff, 0, sizeof(m_buff[ix].rec_buff));
 		}
 		// Copying of new byte
-		rec_buff[msg_i] = rx_buff[0];
+		m_buff[ix].rec_buff[m_buff[ix].msg_i] = rx_buff[0];
 
 		// Check if message is complete
 		if(rx_buff[0] == '\n')
 		{
-			msg_i = 0;
-			if(strcmp("ACK\n", (char*)rec_buff) == 0)
-				msg_flag = 1;
+			m_buff[ix].msg_i = 0;
+			if(strcmp("ACK\n", (char*)m_buff[ix].rec_buff) == 0)
+				m_buff[ix].msg_flag = 1;
 
-			else if(huart == &MASTER_UART)
+			else if(m_buff[ix].used_huart == &MASTER_UART)
 			{
 				HAL_UART_Transmit(huart, (uint8_t*)"ACK\n", 4, 100);
 
 				// Compares the message address the the address of the slave
-				int msg_adr = atoi((char *)rec_buff);
+				int msg_adr = atoi((char *)m_buff[ix].rec_buff);
 
 				if(msg_adr != 0 && msg_adr != slave_adr)
-					HAL_UART_Transmit(&SLAVE_UART, (uint8_t*)rec_buff, strlen((char*)rec_buff), 100);
+					HAL_UART_Transmit(&SLAVE_UART, (uint8_t*)m_buff[ix].rec_buff, strlen((char*)m_buff[ix].rec_buff), 100);
 
 				else
 				{
-					msg_flag = 1;
+					m_buff[ix].msg_flag = 1;
 					main_flag = 1;
 				}
 			}
-			else if(huart == &SLAVE_UART)
-				HAL_UART_Transmit(&MASTER_UART, (uint8_t*)rec_buff, strlen((char*)rec_buff), 100);
+			else if(m_buff[ix].used_huart == &SLAVE_UART)
+				HAL_UART_Transmit(&MASTER_UART, (uint8_t*)m_buff[ix].rec_buff, strlen((char*)m_buff[ix].rec_buff), 100);
 		}
 		else
-			msg_i++;
+			m_buff[ix].msg_i++;
 	}
 
 	// Exception clause for handling messages larger than the dedicated buffer
 	// Message will be discarded and the buffer won't be read
 	else
 	{
-		msg_i = 0;
+		m_buff[ix].msg_i = 0;
 		if(rx_buff[0] != '\n')
 			OOS_check = 1;
 	}
@@ -548,7 +569,7 @@ char DisectCommand(char * cmd, char * sec_adr)
 	// These are the address, the command and the optional second address for advanced commands
 	char * cmd_tok;
 
-	char adr = atoi(strtok((char*)rec_buff, " "));
+	char adr = atoi(strtok((char*)m_buff[MASTER_I].rec_buff, " "));
 	cmd_tok = strtok(NULL, " ");
 	*sec_adr = atoi(strtok(NULL, " "));
 
@@ -557,9 +578,9 @@ char DisectCommand(char * cmd, char * sec_adr)
 	return adr;
 }
 
-char CheckTimeout(const char * valid_ans, int timeout)
+char CheckTimeout(const char * valid_ans, int timeout, uint8_t ix)
 {
-	int tim_cnt = 0; // Allows communication to the master
+	int tim_cnt = 0;
 
 	// Starts the timer for the timeout function.
 	// Clears flag as a precaution
@@ -568,7 +589,7 @@ char CheckTimeout(const char * valid_ans, int timeout)
 
 	// When a message has been received "msg_flag" will be 1
 	// This loop will count for "timeout" milliseconds
-	while(msg_flag == 0 && tim_cnt < (int)((float)timeout/100))
+	while(m_buff[ix].msg_flag == 0 && tim_cnt < (int)((float)timeout/100))
 	{
 		if(__HAL_TIM_GET_FLAG(&MSG_TIM, TIM_FLAG_UPDATE))
 		{
@@ -582,10 +603,10 @@ char CheckTimeout(const char * valid_ans, int timeout)
 	__HAL_TIM_SET_COUNTER(&MSG_TIM, 0);
 
 	// Reads the incoming message (if received), and compares it to the expected answer
-	if(msg_flag)
+	if(m_buff[ix].msg_flag)
 	{
-		msg_flag = 0;
-		if(strstr(valid_ans, (char*)rec_buff) != NULL)
+		m_buff[ix].msg_flag = 0;
+		if(strstr(valid_ans, (char*)m_buff[ix].rec_buff) != NULL)
 			return 1;
 	}
 
@@ -594,12 +615,13 @@ char CheckTimeout(const char * valid_ans, int timeout)
 
 }
 
-char SendMessage(UART_HandleTypeDef *huart, const char * msg)
+char SendMessage(uint8_t ix, const char * msg)
 {
+	uint8_t nix = (ix == 0 ? 1 : 0);
+
 	strcpy((char*)tx_debug, msg);
-	if(HAL_UART_Transmit(huart, (uint8_t*) msg, strlen(msg), 100) != HAL_OK)
-		__NOP();
-	return (CheckTimeout("ACK\n", ACK_TIMEOUT));
+	HAL_UART_Transmit(m_buff[ix].used_huart, (uint8_t*) msg, strlen(msg), 100);
+	return (CheckTimeout("ACK\n", ACK_TIMEOUT, nix));
 }
 
 char CheckButton()
