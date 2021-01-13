@@ -34,9 +34,13 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define MSG_MAX_LEN 12
+
 #define MASTER_UART huart2
 #define SLAVE_UART huart1
+
+#define SPEAKER_TIM htim2
 #define MSG_TIM htim1
+
 #define ACK_TIMEOUT 500
 /* USER CODE END PD */
 
@@ -112,7 +116,7 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+
   HAL_UART_Receive_IT(&MASTER_UART, rx_buff, 1);
   HAL_UART_Receive_IT(&SLAVE_UART, rx_buff, 1);
   HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
@@ -156,18 +160,19 @@ int main(void)
 				HAL_UART_Transmit(&SLAVE_UART, (uint8_t*) reply, strlen(reply), 100);
 
 				// LED is low-active with pin C13
-				if(sec_adr == slave_adr)
+				if(sec_adr == slave_adr){
+					HAL_TIM_PWM_Start(&SPEAKER_TIM, TIM_CHANNEL_1);
 					HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-
+				}
 				// Checks if the button is being pressed
 				char pressed = 0;
 				while(pressed == GPIO_PIN_RESET && strcmp((char*)rec_buff, "0 OFF\n") != 0)
 				{
-					pressed = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
+					pressed = CheckButton();
 				}
 
 				// Waits until the button is released
-				while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1));
+				while(CheckButton());
 
 				// Forwards the message to neighbour.
 				// Would be neater if this was done during the callback
@@ -186,6 +191,7 @@ int main(void)
 
 				// Turns the LED off (low-active)
 				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+				HAL_TIM_PWM_Stop(&SPEAKER_TIM, TIM_CHANNEL_1);
 			}
 
 			// If the button was pressed, process wont be in the forwarding mode
@@ -497,38 +503,30 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		if(rx_buff[0] == '\n')
 		{
 			msg_i = 0;
-			if((strcmp("ACK\n", (char*)rec_buff) != 0) && huart == &MASTER_UART)
-			{
+			if(strcmp("ACK\n", (char*)rec_buff) == 0)
+				msg_flag = 1;
 
+			else if(huart == &MASTER_UART)
+			{
 				HAL_UART_Transmit(huart, (uint8_t*)"ACK\n", 4, 100);
-			}
-			else if((strcmp("ACK\n", (char*)rec_buff) != 0) && huart == &SLAVE_UART)
-			{
-				HAL_UART_Transmit(&MASTER_UART, (uint8_t*)rec_buff, strlen((char*)rec_buff), 100);
-				__NOP();
-			}
-			// Compares the message address the the address of the slave
-			int msg_adr = atoi((char *)rec_buff);
-			if(huart == &MASTER_UART)
-			{
-				if(msg_adr == 0 || msg_adr == slave_adr)
+
+				// Compares the message address the the address of the slave
+				int msg_adr = atoi((char *)rec_buff);
+
+				if(msg_adr != 0 && msg_adr != slave_adr)
+					HAL_UART_Transmit(&SLAVE_UART, (uint8_t*)rec_buff, strlen((char*)rec_buff), 100);
+
+				else
 				{
 					msg_flag = 1;
 					main_flag = 1;
 				}
-				else
-				{
-					HAL_UART_Transmit(&SLAVE_UART, (uint8_t*)rec_buff, strlen((char*)rec_buff), 100);
-					__NOP();
-				}
 			}
-			if(strcmp("ACK\n", (char*)rec_buff) == 0)
-				msg_flag = 1;
+			else if(huart == &SLAVE_UART)
+				HAL_UART_Transmit(&MASTER_UART, (uint8_t*)rec_buff, strlen((char*)rec_buff), 100);
 		}
 		else
-		{
 			msg_i++;
-		}
 	}
 
 	// Exception clause for handling messages larger than the dedicated buffer
@@ -602,6 +600,15 @@ char SendMessage(UART_HandleTypeDef *huart, const char * msg)
 	if(HAL_UART_Transmit(huart, (uint8_t*) msg, strlen(msg), 100) != HAL_OK)
 		__NOP();
 	return (CheckTimeout("ACK\n", ACK_TIMEOUT));
+}
+
+char CheckButton()
+{
+	char pressed = 0;
+	pressed = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_7);
+	pressed += HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0);
+	pressed += HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_1);
+	return pressed;
 }
 /* USER CODE END 4 */
 
