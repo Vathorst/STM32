@@ -59,13 +59,14 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 char DisectCommand(char * cmd, char * sec_adr);
-char SendMessage(UART_HandleTypeDef *huart, const char * msg);
+char SendMessage(uint8_t ix, const char * msg);
+char CheckTimeout(const char * valid_ans, int timeout, uint8_t ix);
 char CheckButton();
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
 /* USER CODE BEGIN Private defines */
-
+#define MSG_MAX_LEN 12
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
