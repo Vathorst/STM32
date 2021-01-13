@@ -237,6 +237,13 @@ int main(void)
 
     case STATE_END:
     	//TODO: Print score
+
+#ifdef DEBUG
+    	sprintf(buf, "Score = %d\n", score);
+		HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)"Klaar met uitvoering.\r\n", 23, 100);
+    	HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)buf, strlen((char*)buf), 100);
+#endif
+    	SendMessage("0 OFF\n");
     	HAL_Delay(500); // Currently delay of 500ms, real delay should be 10 seconds
     	score = 0;
     	state = STATE_STR;
@@ -672,6 +679,8 @@ char SendMessage(const char * msg)
 #ifdef debug
 	HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) "Sent: ", 6, 10);
 	HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) msg, strlen(msg), 100);
+#else
+	HAL_Delay(50);
 #endif
 
 	// Every message sent requires "ACK\n" as an answer.
@@ -718,6 +727,7 @@ void SetLed(uint16_t led_pin, uint8_t state)
 		__HAL_TIM_SET_COUNTER(&LED_TIM, 0);
 	}
 }
+
 
 /* USER CODE END 4 */
 
