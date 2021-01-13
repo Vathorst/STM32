@@ -43,7 +43,7 @@
 #define MSG_TIM htim2
 #define LED_TIM htim5
 
-#define ACK_TIMEOUT 500
+#define ACK_TIMEOUT 2000
 
 #define LED_BLINK 3
 #define LED_TOGGLE 2
@@ -64,7 +64,7 @@ enum state_t {
 	STATE_END,
 };
 
-//#define debug
+#define debug
 
 /* USER CODE END PD */
 
