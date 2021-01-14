@@ -48,7 +48,7 @@ typedef struct {
 #define SPEAKER_TIM htim2
 #define MSG_TIM htim1
 
-#define ACK_TIMEOUT 500
+#define ACK_TIMEOUT 1000
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -141,7 +141,6 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	if(main_flag)
 	{
-
 		main_flag = 0;
 		m_buff[MASTER_I].msg_flag = 0;
 		char reply[MSG_MAX_LEN];
@@ -187,14 +186,16 @@ int main(void)
 
 				// Forwards the message to neighbour.
 				// Would be neater if this was done during the callback
-				if(strcmp((char*)m_buff[MASTER_I].rec_buff, "0 OFF\n") == 0)
-				{
-					SendMessage(SLAVE_I, "0 OFF\n");
-				}
+//				if(strcmp((char*)m_buff[MASTER_I].rec_buff, "0 OFF\n") == 0)
+//				{
+//					SendMessage(SLAVE_I, "0 OFF\n");
+//					main_flag = 0;
+//					m_buff[MASTER_I].msg_flag = 0;
+//				}
 
 				// Only check if the button has been pressed if no message has been received yet.
 				// Uses Transmit instead of SendMessage because master communication doesn't need ACK
-				else if(pressed)
+				if(pressed)
 				{
 					sprintf(reply, "PRESSED %d\n", slave_adr);
 					HAL_UART_Transmit(&MASTER_UART, (uint8_t*) reply, strlen(reply), 100);
@@ -617,11 +618,9 @@ char CheckTimeout(const char * valid_ans, int timeout, uint8_t ix)
 
 char SendMessage(uint8_t ix, const char * msg)
 {
-	uint8_t nix = (ix == 0 ? 1 : 0);
-
 	strcpy((char*)tx_debug, msg);
 	HAL_UART_Transmit(m_buff[ix].used_huart, (uint8_t*) msg, strlen(msg), 100);
-	return (CheckTimeout("ACK\n", ACK_TIMEOUT, nix));
+	return (CheckTimeout("ACK\n", ACK_TIMEOUT, ix));
 }
 
 char CheckButton()
