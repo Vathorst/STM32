@@ -43,7 +43,7 @@
 #define MSG_TIM htim2
 #define LED_TIM htim5
 
-#define ACK_TIMEOUT 2000
+#define ACK_TIMEOUT 1000
 
 #define LED_BLINK 3
 #define LED_TOGGLE 2
@@ -220,7 +220,7 @@ int main(void)
     	else
     		state = STATE_ERR;
     	SendMessage("0 OFF\n");
-    	HAL_Delay(250);
+    	HAL_Delay(500);
     	break;
 
     case STATE_ERR:
@@ -244,7 +244,7 @@ int main(void)
 		HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)"Klaar met uitvoering.\r\n", 23, 100);
     	HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)buf, strlen((char*)buf), 100);
 #endif
-    	SendMessage("0 OFF\n");
+    	//SendMessage("0 OFF\n");
     	HAL_Delay(500); // Currently delay of 500ms, real delay should be 10 seconds
     	score = 0;
     	state = STATE_STR;
@@ -322,7 +322,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 42000;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 100;
+  htim2.Init.Period = 200;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
