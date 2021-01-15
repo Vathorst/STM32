@@ -43,28 +43,22 @@
 #define MSG_TIM htim2
 #define LED_TIM htim5
 
-#define ACK_TIMEOUT 500
+#define ACK_TIMEOUT 2000
 
 #define LED_BLINK 3
 #define LED_TOGGLE 2
 #define LED_ON 1
 #define LED_OFF 0
 
+#define MODE_360 360
+#define MODE_180 180
+
 #define BLUE_LED ((uint16_t)0x8000)
 #define RED_LED ((uint16_t)0x4000)
 #define ORANGE_LED ((uint16_t)0x2000)
 #define GREEN_LED ((uint16_t)0x1000)
 
-enum state_t {
-	STATE_STR,
-	STATE_ADR,
-	STATE_CHS,
-	STATE_CTR,
-	STATE_ERR,
-	STATE_END,
-};
-
-//#define debug
+#define debug
 
 /* USER CODE END PD */
 
@@ -150,17 +144,11 @@ int main(void)
   HAL_TIM_Base_Start_IT(&LED_TIM);
 
   uint8_t no_slaves = 0;
-  enum state_t state = STATE_STR;
-  uint16_t mode = 360;
-  uint8_t score = 0;
+  //uint16_t mode = MODE_360;
+  //uint8_t score = 0;
   uint8_t chosen_button = 0;
   char buf[12];
-
-  // Srand  needs a seed that differs each startup, no ideas for this have yet been implemented
-  // Not as important, as the MCU won't be reset every time a person plays.
-  // When the device loses and regains power however, the button sequence will always be the same
-  srand(1);
-
+  char debug_msg[6];
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -171,91 +159,45 @@ int main(void)
     MX_USB_HOST_Process();
 
     /* USER CODE BEGIN 3 */
-    switch(state)
-    {
-    case STATE_STR:
     	SetLed(GREEN_LED, LED_OFF);
-    	if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0))
-    	{
-    		SetLed(GREEN_LED, LED_ON);
-    		state = STATE_ADR;
-    	}
-    	break;
-
-    case STATE_ADR:
-    	//SetLed(ORANGE_LED, LED_OFF);
-    	if(SendCommand("0 ADR 1\n","SLAVE", ACK_TIMEOUT*2))
-    	{
-    		no_slaves = atoi((char*)&rec_buff[6]);
-    		state = STATE_CHS;
-    	}
-    	else
-    	{
-    		SetLed(ORANGE_LED, LED_ON);
-    		state = STATE_STR;
-    	}
-    	break;
-
-    case STATE_CHS:
-    	//TODO: print score
+    	SetLed(ORANGE_LED, LED_OFF);
     	SetLed(RED_LED, LED_OFF);
-    	if(no_slaves)
-    		chosen_button = (rand() % (mode == 360 ? no_slaves : no_slaves >> 1))+1;
 
-    	state = STATE_CTR;
-    	break;
+    	HAL_Delay(1000);
+		if((SendCommand("0 ADR 1\n","SLAVE", ACK_TIMEOUT*2)))
+		{
+			no_slaves = atoi((char*)&rec_buff[6]);
+		}
 
-    case STATE_CTR:
+    	else
+    	{
+    		HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)"addressering werkt_niet\r\n", 23, 100);
+    		HAL_UART_Transmit(&DEBUG_UART,&rec_buff[6], 23, 100);
+    	}
+		HAL_Delay(10000);
+
+		if(no_slaves)//  && (chosen_button<no_slaves))
+			chosen_button++;
+		else
+		{
+			SetLed(ORANGE_LED, LED_ON);
+			HAL_Delay(1000);
+	    	SendMessage("0 OFF\n");
+		}
+
     	sprintf(buf, "0 ON %d\n", chosen_button);
-    	if(SendCommand(buf, "PRESSED", 5000-(score*100)))
+    	if(SendCommand(buf, "PRESSED", 10000))
     	{
-    		if(atoi((char*)&rec_buff[8]) == chosen_button)
-    		{
-				state = STATE_CHS;
-				score++;
-    		}
-    		else
-    			state = STATE_END;
+    		if((atoi((char*)&rec_buff[8]) == chosen_button))
+    		HAL_UART_Transmit(&DEBUG_UART, (uint8_t*)"Werkt",6, 100);
+    		sprintf(debug_msg, "%d\r\n", chosen_button);
+    		HAL_UART_Transmit(&DEBUG_UART,(uint8_t*)debug_msg , 6, 100);
     	}
-    	else
-    		state = STATE_ERR;
+		else
+			HAL_Delay(250);
+
     	SendMessage("0 OFF\n");
-    	HAL_Delay(250);
-    	break;
-
-    case STATE_ERR:
-
-    	sprintf(buf, "%d ASK\n", chosen_button);
-    	if(SendCommand(buf, "ANS", ACK_TIMEOUT*2))
-    	{
-			if(atoi((char*)&rec_buff[4]) == chosen_button)
-				SetLed(RED_LED, LED_OFF);
-    	}
-    	else
-    		SetLed(RED_LED, LED_ON);
-    	state = STATE_END;
-    	break;
-
-    case STATE_END:
-    	//TODO: Print score
-
-#ifdef DEBUG
-    	sprintf(buf, "Score = %d\n", score);
-		HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)"Klaar met uitvoering.\r\n", 23, 100);
-    	HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)buf, strlen((char*)buf), 100);
-#endif
-    	SendMessage("0 OFF\n");
-    	HAL_Delay(500); // Currently delay of 500ms, real delay should be 10 seconds
-    	score = 0;
-    	state = STATE_STR;
-    	break;
-
-    default:
-    	state = STATE_STR;
     }
-  }
-  __NOP(); // Should never reach here
-
   /* USER CODE END 3 */
 }
 
