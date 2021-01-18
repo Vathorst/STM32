@@ -42,7 +42,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+extern uint16_t blink_pin;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -223,7 +223,7 @@ void TIM5_IRQHandler(void)
   /* USER CODE END TIM5_IRQn 0 */
   HAL_TIM_IRQHandler(&htim5);
   /* USER CODE BEGIN TIM5_IRQn 1 */
-  HAL_GPIO_WritePin(GPIOD, LD3_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED_GPIO, blink_pin, GPIO_PIN_RESET);
   __HAL_RCC_TIM5_CLK_DISABLE();
 
   /* USER CODE END TIM5_IRQn 1 */

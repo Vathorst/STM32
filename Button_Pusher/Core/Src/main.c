@@ -49,6 +49,7 @@
 #define LED_ON 1
 #define LED_OFF 0
 
+
 #define BLUE_LED ((uint16_t)0x8000)
 #define RED_LED ((uint16_t)0x4000)
 #define ORANGE_LED ((uint16_t)0x2000)
@@ -103,12 +104,14 @@ void SetLed(uint16_t led_pin, uint8_t state);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-	uint8_t rx_buff[1];
-	uint8_t tx_debug[12];	// Used only for debugging
-	uint8_t rec_buff[MSG_MAX_LEN];
-	uint8_t msg_i = 0;				// Index for rec_buff
-	uint8_t msg_flag = 0;
-	uint8_t msg_enable = 0;
+uint8_t rx_buff[1];
+uint8_t tx_debug[12];	// Used only for debugging
+uint8_t rec_buff[MSG_MAX_LEN];
+uint8_t msg_i = 0;				// Index for rec_buff
+uint8_t msg_flag = 0;
+uint8_t msg_enable = 0;
+
+uint16_t blink_pin;
 /* USER CODE END 0 */
 
 /**
@@ -712,17 +715,18 @@ char SendCommand(const char * cmd, const char * ans, int timeout)
 void SetLed(uint16_t led_pin, uint8_t state)
 {
 	if(state == LED_TOGGLE)
-		HAL_GPIO_TogglePin(GPIOD, led_pin);
+		HAL_GPIO_TogglePin(LED_GPIO, led_pin);
 
 	if(state == LED_ON)
-    	HAL_GPIO_WritePin(GPIOD, led_pin, GPIO_PIN_SET);
+    	HAL_GPIO_WritePin(LED_GPIO, led_pin, GPIO_PIN_SET);
 
 	if(state == LED_OFF)
-    	HAL_GPIO_WritePin(GPIOD, led_pin, GPIO_PIN_RESET);
+    	HAL_GPIO_WritePin(LED_GPIO, led_pin, GPIO_PIN_RESET);
 
-	if(led_pin == ORANGE_LED && state == LED_BLINK)
+	if(state == LED_BLINK)
 	{
-		HAL_GPIO_WritePin(GPIOD, led_pin, GPIO_PIN_SET);
+		blink_pin = led_pin;
+		HAL_GPIO_WritePin(LED_GPIO, led_pin, GPIO_PIN_SET);
 		__HAL_RCC_TIM5_CLK_ENABLE();
 		HAL_TIM_Base_Start_IT(&LED_TIM);
 		__HAL_TIM_SET_COUNTER(&LED_TIM, 0);

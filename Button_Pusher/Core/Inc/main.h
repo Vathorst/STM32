@@ -99,7 +99,7 @@ void Error_Handler(void);
 #define MEMS_INT2_Pin GPIO_PIN_1
 #define MEMS_INT2_GPIO_Port GPIOE
 /* USER CODE BEGIN Private defines */
-
+#define LED_GPIO GPIOD
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
