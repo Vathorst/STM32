@@ -183,15 +183,6 @@ int main(void)
 				// Waits until the button is released
 				while(CheckButton());
 
-				// Forwards the message to neighbour.
-				// Would be neater if this was done during the callback
-//				if(strcmp((char*)m_buff[MASTER_I].rec_buff, "0 OFF\n") == 0)
-//				{
-//					SendMessage(SLAVE_I, "0 OFF\n");
-//					main_flag = 0;
-//					m_buff[MASTER_I].msg_flag = 0;
-//				}
-
 				// Only check if the button has been pressed if no message has been received yet.
 				// Uses Transmit instead of SendMessage because master communication doesn't need ACK
 				if(pressed)
