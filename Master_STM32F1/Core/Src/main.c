@@ -36,7 +36,7 @@
 
 #define SCHERM_UART huart2
 #define SLAVE_UART huart1
-
+#define DEBUG_UART huart2
 #define MSG_TIM htim1
 #define LED_TIM htim2
 
@@ -44,12 +44,11 @@
 
 #define LED_BLINK 3
 #define LED_TOGGLE 2
-#define LED_ON 1
-#define LED_OFF 0
+#define LED_ON 0
+#define LED_OFF 1
 
-#define LED_GPIO GPIOC
+
 #define BLUE_LED ((uint16_t)0x2000)
-#define BLINKING_LED BLUE_LED
 //#define RED_LED ((uint16_t)0x4000)
 //#define ORANGE_LED ((uint16_t)0x2000)
 //#define GREEN_LED ((uint16_t)0x1000)
@@ -106,6 +105,8 @@ uint8_t rec_buff[MSG_MAX_LEN];
 uint8_t msg_i = 0;				// Index for rec_buff
 uint8_t msg_flag = 0;
 uint8_t msg_enable = 0;
+
+uint16_t blink_pin;
 /* USER CODE END 0 */
 
 /**
@@ -168,35 +169,30 @@ int main(void)
 	switch(state)
 	  {
 	  case STATE_STR:
-		SetLed(GREEN_LED, LED_OFF);
 		if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0))
-		{
-			SetLed(GREEN_LED, LED_ON);
 			state = STATE_ADR;
-		}
 		break;
 
 	  case STATE_ADR:
-		//SetLed(ORANGE_LED, LED_OFF);
 		if(SendCommand("0 ADR 1\n","SLAVE", ACK_TIMEOUT*2))
 		{
 			no_slaves = atoi((char*)&rec_buff[6]);
 			state = STATE_CHS;
 		}
 		else
-		{
-			SetLed(ORANGE_LED, LED_ON);
 			state = STATE_STR;
-		}
 		break;
 
 	  case STATE_CHS:
-		//TODO: print score
-		SetLed(RED_LED, LED_OFF);
+		sprintf(buf, "SCORE =%d\r\n", score);
+		HAL_UART_Transmit(&SCHERM_UART, buf, strlen(buf), 100);
 		if(no_slaves)
+		{
 			chosen_button = (rand() % (mode == 360 ? no_slaves : no_slaves >> 1))+1;
-
-		state = STATE_CTR;
+			state = STATE_CTR;
+		}
+		else
+			state = STATE_STR;
 		break;
 
 	  case STATE_CTR:
@@ -223,23 +219,24 @@ int main(void)
 		if(SendCommand(buf, "ANS", ACK_TIMEOUT*2))
 		{
 			if(atoi((char*)&rec_buff[4]) == chosen_button)
-				SetLed(RED_LED, LED_OFF);
+				SetLed(BLUE_LED, LED_OFF);
 		}
 		else
-			SetLed(RED_LED, LED_ON);
+			SetLed(BLUE_LED, LED_ON);
 		state = STATE_END;
 		break;
 
 	  case STATE_END:
-		//TODO: Print score
+		sprintf(buf, "SCORE =%d\r\n", score);
+		HAL_UART_Transmit(&SCHERM_UART, buf, strlen(buf), 100);
 
 #ifdef debug
 	sprintf(buf, "Score = %d\n", score);
 	HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)"Klaar met uitvoering.\r\n", 23, 100);
 	HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)buf, strlen((char*)buf), 100);
 #endif
-		//SendMessage("0 OFF\n");
-		HAL_Delay(500); // Currently delay of 500ms, real delay should be 10 seconds
+		HAL_Delay(500);
+		HAL_UART_Transmit(&SCHERM_UART, "MENU\r\n", 6, 100);
 		score = 0;
 		state = STATE_STR;
 		break;
@@ -470,8 +467,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_7;
+  /*Configure GPIO pins : PA0 PA7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -510,7 +507,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		if(msg_i == 0)
 			memset(rec_buff, 0, sizeof(rec_buff));
 
-    	SetLed(ORANGE_LED, LED_BLINK);
+    	SetLed(BLUE_LED, LED_BLINK);
 
 		rec_buff[msg_i] = rx_buff[0];
 		if(rx_buff[0] == '\n')
@@ -604,7 +601,7 @@ char SendMessage(const char * msg)
 
 	// Every message sent requires "ACK\n" as an answer.
 	// Master only sends messages to slaves this way, as the screen doesn't require acknowledgement
-	SetLed(ORANGE_LED, LED_BLINK);
+	SetLed(BLUE_LED, LED_BLINK);
 	strcpy((char*)tx_debug, (char*)msg);
 	HAL_UART_Transmit(&SLAVE_UART, (uint8_t*) msg, strlen(msg), 100);
 	return (CheckTimeout("ACK\n", ACK_TIMEOUT));
@@ -630,18 +627,19 @@ char SendCommand(const char * cmd, const char * ans, int timeout)
 void SetLed(uint16_t led_pin, uint8_t state)
 {
 	if(state == LED_TOGGLE)
-		HAL_GPIO_TogglePin(GPIOD, led_pin);
+		HAL_GPIO_TogglePin(LED_GPIO, led_pin);
 
 	if(state == LED_ON)
-    	HAL_GPIO_WritePin(GPIOD, led_pin, GPIO_PIN_SET);
+    	HAL_GPIO_WritePin(LED_GPIO, led_pin, GPIO_PIN_SET);
 
 	if(state == LED_OFF)
-    	HAL_GPIO_WritePin(GPIOD, led_pin, GPIO_PIN_RESET);
+    	HAL_GPIO_WritePin(LED_GPIO, led_pin, GPIO_PIN_RESET);
 
-	if(led_pin == ORANGE_LED && state == LED_BLINK)
+	if(state == LED_BLINK)
 	{
-		HAL_GPIO_WritePin(GPIOD, led_pin, GPIO_PIN_SET);
-		__HAL_RCC_TIM5_CLK_ENABLE();
+		blink_pin = led_pin;
+		HAL_GPIO_WritePin(LED_GPIO, led_pin, GPIO_PIN_SET);
+		__HAL_RCC_TIM2_CLK_ENABLE();
 		HAL_TIM_Base_Start_IT(&LED_TIM);
 		__HAL_TIM_SET_COUNTER(&LED_TIM, 0);
 	}

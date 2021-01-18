@@ -42,7 +42,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+extern uint16_t blink_pin;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -224,7 +224,8 @@ void USART2_IRQHandler(void)
   /* USER CODE END USART2_IRQn 0 */
   HAL_UART_IRQHandler(&huart2);
   /* USER CODE BEGIN USART2_IRQn 1 */
-
+  HAL_GPIO_WritePin(LED_GPIO, blink_pin, GPIO_PIN_RESET);
+  __HAL_RCC_TIM2_CLK_DISABLE();
   /* USER CODE END USART2_IRQn 1 */
 }
 

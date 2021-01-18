@@ -175,7 +175,7 @@ int main(void)
 
 				// Checks if the button is being pressed
 				char pressed = 0;
-				while(pressed == GPIO_PIN_RESET && strcmp((char*)m_buff[MASTER_I].rec_buff, "0 OFF\n") != 0)
+				while(pressed == GPIO_PIN_RESET && m_buff[MASTER_I].msg_flag == 1)
 				{
 					pressed = CheckButton();
 				}
