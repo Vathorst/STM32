@@ -185,7 +185,7 @@ int main(void)
 
 	  case STATE_CHS:
 		sprintf(buf, "SCORE =%d\r\n", score);
-		HAL_UART_Transmit(&SCHERM_UART, buf, strlen(buf), 100);
+		HAL_UART_Transmit(&SCHERM_UART, (uint8_t *)buf, strlen((char*)buf), 100);
 		if(no_slaves)
 		{
 			chosen_button = (rand() % (mode == 360 ? no_slaves : no_slaves >> 1))+1;
@@ -228,7 +228,7 @@ int main(void)
 
 	  case STATE_END:
 		sprintf(buf, "SCORE =%d\r\n", score);
-		HAL_UART_Transmit(&SCHERM_UART, buf, strlen(buf), 100);
+		HAL_UART_Transmit(&SCHERM_UART, (uint8_t *)buf, strlen((char*)buf), 100);
 
 #ifdef debug
 	sprintf(buf, "Score = %d\n", score);
@@ -236,7 +236,7 @@ int main(void)
 	HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)buf, strlen((char*)buf), 100);
 #endif
 		HAL_Delay(500);
-		HAL_UART_Transmit(&SCHERM_UART, "MENU\r\n", 6, 100);
+		HAL_UART_Transmit(&SCHERM_UART, (uint8_t *)"MENU\r\n", 6, 100);
 		score = 0;
 		state = STATE_STR;
 		break;
