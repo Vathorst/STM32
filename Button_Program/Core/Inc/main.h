@@ -66,7 +66,7 @@ char CheckButton();
 
 /* Private defines -----------------------------------------------------------*/
 /* USER CODE BEGIN Private defines */
-#define MSG_MAX_LEN 12
+#define MSG_MAX_LEN 16
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
