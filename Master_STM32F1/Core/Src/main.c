@@ -27,12 +27,19 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef struct {
+	uint8_t msg_i;
+	uint8_t msg_en;
+	uint8_t msg_flag;
+	uint8_t rec_buff[MSG_MAX_LEN];
+	UART_HandleTypeDef * used_huart;
+}t_module;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define MSG_MAX_LEN 16
+
+#define HALF "180\n"
 
 #define SCHERM_UART huart2
 #define SLAVE_UART huart1
@@ -47,6 +54,8 @@
 #define LED_ON 0
 #define LED_OFF 1
 
+#define SCHERM_I 0
+#define SLAVE_I 1
 
 #define BLUE_LED ((uint16_t)0x2000)
 //#define RED_LED ((uint16_t)0x4000)
@@ -102,12 +111,13 @@ int CheckMsg();
 /* USER CODE BEGIN 0 */
 uint8_t rx_buff[1];
 uint8_t tx_debug[12];	// Used only for debugging
-uint8_t rec_buff[MSG_MAX_LEN];
-uint8_t msg_i = 0;				// Index for rec_buff
-uint8_t msg_flag = 0;
-uint8_t msg_enable = 0;
+//uint8_t rec_buff[MSG_MAX_LEN];
+//uint8_t msg_i = 0;				// Index for rec_buff
+//uint8_t msg_flag = 0;
+//uint8_t msg_enable = 0;
 
 uint16_t blink_pin;
+t_module m_buff[2];
 /* USER CODE END 0 */
 
 /**
@@ -147,6 +157,9 @@ int main(void)
   HAL_UART_Receive_IT(&DEBUG_UART, rx_buff, 1);
   HAL_TIM_Base_Start_IT(&LED_TIM);
 
+  m_buff[SCHERM_I].used_huart = &SCHERM_UART;
+  m_buff[SLAVE_I].used_huart = &SLAVE_UART;
+
   uint8_t no_slaves = 0;
   enum state_t state = STATE_STR;
   uint16_t mode = 360;
@@ -171,20 +184,20 @@ int main(void)
 	switch(state)
 	  {
 	  case STATE_STR:
-		msg_enable = 1;
+		m_buff[SCHERM_I].msg_en = 1;
 		mode = CheckMsg();
 		if(mode != 0)
 		{
 			state = STATE_ADR;
-			msg_enable = 0;
-			msg_flag = 0;
+			m_buff[SCHERM_I].msg_en = 0;
+			m_buff[SCHERM_I].msg_flag = 0;
 		}
 		break;
 
 	  case STATE_ADR:
 		if(SendCommand("0 ADR 1\n","SLAVE", ACK_TIMEOUT*2))
 		{
-			no_slaves = atoi((char*)&rec_buff[6]);
+			no_slaves = atoi((char*)&m_buff[SLAVE_I].rec_buff[6]);
 			state = STATE_CHS;
 		}
 		else
@@ -207,7 +220,7 @@ int main(void)
 		sprintf(buf, "0 ON %d\n", chosen_button);
 		if(SendCommand(buf, "PRESSED", 5000-(score*100)))
 		{
-			if(atoi((char*)&rec_buff[8]) == chosen_button)
+			if(atoi((char*)&m_buff[SLAVE_I].rec_buff[8]) == chosen_button)
 			{
 				state = STATE_CHS;
 				score++;
@@ -226,7 +239,7 @@ int main(void)
 		sprintf(buf, "%d ASK\n", chosen_button);
 		if(SendCommand(buf, "ANS", ACK_TIMEOUT*2))
 		{
-			if(atoi((char*)&rec_buff[4]) == chosen_button)
+			if(atoi((char*)&m_buff[SLAVE_I].rec_buff[4]) == chosen_button)
 				SetLed(BLUE_LED, LED_OFF);
 		}
 		else
@@ -243,7 +256,7 @@ int main(void)
 	HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)"Klaar met uitvoering.\r\n", 23, 100);
 	HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)buf, strlen((char*)buf), 100);
 #endif
-		HAL_Delay(500);
+		HAL_Delay(10000);
 		HAL_UART_Transmit(&SCHERM_UART, (uint8_t *)"MENU\r\n", 6, 100);
 		score = 0;
 		state = STATE_STR;
@@ -492,9 +505,20 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
+	uint8_t ix;
+	if(huart == m_buff[SCHERM_I].used_huart)
+		ix = SCHERM_I;
+	else if(huart == m_buff[SLAVE_I].used_huart)
+		ix = SLAVE_I;
+	else
+	{
+		HAL_UART_Receive_IT(huart, rx_buff, 1);
+		return;
+	}
+
 	// Master has defined answers its looking for
 	// Only listens to the message if a command has been sent
-	if(!msg_enable)
+	if(m_buff[ix].msg_en == 0)
 	{
 		HAL_UART_Receive_IT(huart, rx_buff, 1);
 		return;
@@ -509,25 +533,25 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	}
 
 	// Places new byte into global array
-	else if(msg_i < MSG_MAX_LEN)
+	else if(m_buff[ix].msg_i < MSG_MAX_LEN)
 	{
 		// Once a new message has started, delete the old message
-		if(msg_i == 0)
-			memset(rec_buff, 0, sizeof(rec_buff));
+		if(m_buff[ix].msg_i == 0)
+			memset(m_buff[ix].rec_buff, 0, sizeof(m_buff[ix].rec_buff));
 
     	SetLed(BLUE_LED, LED_BLINK);
 
-		rec_buff[msg_i] = rx_buff[0];
+    	m_buff[ix].rec_buff[m_buff[ix].msg_i] = rx_buff[0];
 		if(rx_buff[0] == '\n')
 		{
-			if(huart == &SLAVE_UART && strcmp("ACK\n", (char*)rec_buff) != 0)
+			if(huart == &SLAVE_UART && strcmp("ACK\n", (char*)m_buff[ix].rec_buff) != 0)
 				HAL_UART_Transmit(&SLAVE_UART, (uint8_t*)"ACK\n", 4, 100);
-			msg_i = 0;
-			msg_flag = 1;
+			m_buff[ix].msg_i = 0;
+			m_buff[ix].msg_flag = 1;
 		}
 		else
 		{
-			msg_i++;
+			m_buff[ix].msg_i++;
 		}
 	}
 
@@ -535,7 +559,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	// Message will be discarded and the buffer won't be read
 	else
 	{
-		msg_i = 0;
+		m_buff[ix].msg_i = 0;
 		if(rx_buff[0] != '\n')
 
 			OOS_check = 1;
@@ -547,7 +571,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 char CheckTimeout(const char * valid_ans, int timeout)
 {
-	msg_enable = 1;		// Allows communication to the master
+	m_buff[SLAVE_I].msg_en = 1;		// Allows communication to the master
 	int tim_cnt = 0;	// Keeps a count of how many times the timer updated, this happens every 100ms
 
 	// Starts the timer for the timeout function.
@@ -557,7 +581,7 @@ char CheckTimeout(const char * valid_ans, int timeout)
 
 	// When a message has been received "msg_flag" will be 1
 	// This loop will count for "timeout" milliseconds
-	while(msg_flag == 0 && tim_cnt < (int)((float)timeout/100))
+	while(m_buff[SLAVE_I].msg_flag == 0 && tim_cnt < (int)((float)timeout/100))
 	{
 		if(__HAL_TIM_GET_FLAG(&MSG_TIM, TIM_FLAG_UPDATE))
 		{
@@ -571,17 +595,17 @@ char CheckTimeout(const char * valid_ans, int timeout)
 	__HAL_TIM_SET_COUNTER(&MSG_TIM, 0);
 
 	// Disables any other incoming messages
-	msg_enable = 0;
+	m_buff[SLAVE_I].msg_en = 0;
 
 	// Reads the incoming message (if received), and compares it to the expected answer
-	if(msg_flag)
+	if(m_buff[SLAVE_I].msg_flag)
 	{
-		msg_flag = 0;
+		m_buff[SLAVE_I].msg_flag = 0;
 #ifdef debug
 		HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) "Received: ", 10, 100);
-		HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) rec_buff, strlen((char*)rec_buff), 100);
+		HAL_UART_Transmit(&DEBUG_UART, (uint8_t*) m_buff[SLAVE_I].rec_buff, strlen((char*)m_buff[SLAVE_I].rec_buff), 100);
 #endif
-		if(strstr((char*)rec_buff, valid_ans) != NULL)
+		if(strstr((char*)m_buff[SLAVE_I].rec_buff, valid_ans) != NULL)
 			return 1;
 #ifdef debug
 		else
@@ -655,13 +679,15 @@ void SetLed(uint16_t led_pin, uint8_t state)
 
 int CheckMsg()
 {
+	if(m_buff[SCHERM_I].msg_flag == 0)
+		return(0);
+
 	int ret_val = 0;
-	if(strcmp((char*)rec_buff, "360\n") == 0)
-		ret_val = 360;
-	else if(strcmp((char*)rec_buff, "180\n") == 0)
+	if(strcmp((char*)m_buff[SCHERM_I].rec_buff, HALF) == 0)
 		ret_val = 180;
 	else
-		ret_val = 0;
+		ret_val = 360;
+
 	return(ret_val);
 }
 /* USER CODE END 4 */
