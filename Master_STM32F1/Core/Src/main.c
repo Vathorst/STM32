@@ -95,6 +95,7 @@ char CheckTimeout(const char * valid_ans, int timeout);
 char SendMessage(const char * msg);
 char SendCommand(const char * cmd, const char * ans, int timeout);
 void SetLed(uint16_t led_pin, uint8_t state);
+int CheckMsg();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -143,6 +144,7 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&SLAVE_UART, rx_buff, 1);
+  HAL_UART_Receive_IT(&DEBUG_UART, rx_buff, 1);
   HAL_TIM_Base_Start_IT(&LED_TIM);
 
   uint8_t no_slaves = 0;
@@ -169,8 +171,14 @@ int main(void)
 	switch(state)
 	  {
 	  case STATE_STR:
-		if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0))
+		msg_enable = 1;
+		mode = CheckMsg();
+		if(mode != 0)
+		{
 			state = STATE_ADR;
+			msg_enable = 0;
+			msg_flag = 0;
+		}
 		break;
 
 	  case STATE_ADR:
@@ -643,6 +651,18 @@ void SetLed(uint16_t led_pin, uint8_t state)
 		HAL_TIM_Base_Start_IT(&LED_TIM);
 		__HAL_TIM_SET_COUNTER(&LED_TIM, 0);
 	}
+}
+
+int CheckMsg()
+{
+	int ret_val = 0;
+	if(strcmp((char*)rec_buff, "360\n") == 0)
+		ret_val = 360;
+	else if(strcmp((char*)rec_buff, "180\n") == 0)
+		ret_val = 180;
+	else
+		ret_val = 0;
+	return(ret_val);
 }
 /* USER CODE END 4 */
 
