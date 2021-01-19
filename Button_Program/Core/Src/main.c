@@ -47,7 +47,7 @@ typedef struct {
 #define SPEAKER_TIM htim2
 #define MSG_TIM htim1
 
-#define ACK_TIMEOUT 1000
+#define ACK_TIMEOUT 500
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -81,10 +81,7 @@ static void MX_TIM2_Init(void);
 /* USER CODE BEGIN 0 */
 uint8_t rx_buff[1];
 uint8_t tx_debug[12];
-//uint8_t rec_buff[MSG_MAX_LEN];
-//uint8_t msg_i = 0;				// Index for rec_buff
 uint8_t main_flag = 0;
-//uint8_t msg_flag = 0;
 uint8_t slave_adr = 0;
 
 t_module m_buff[2];
@@ -123,8 +120,8 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  m_buff[0].used_huart = &MASTER_UART;
-  m_buff[1].used_huart = &SLAVE_UART;
+  m_buff[MASTER_I].used_huart = &MASTER_UART;
+  m_buff[SLAVE_I].used_huart = &SLAVE_UART;
 
   HAL_UART_Receive_IT(&MASTER_UART, rx_buff, 1);
   HAL_UART_Receive_IT(&SLAVE_UART, rx_buff, 1);
@@ -143,6 +140,7 @@ int main(void)
 		main_flag = 0;
 		m_buff[MASTER_I].msg_flag = 0;
 		char reply[MSG_MAX_LEN];
+		char m_mess[MSG_MAX_LEN];
 		char cmd[4];
 		char sec_adr;
 		char adr = DisectCommand(cmd, &sec_adr);
@@ -151,8 +149,8 @@ int main(void)
 			if(strcmp(cmd, "ADR") == 0)
 			{
 				slave_adr = sec_adr;
-				sprintf(reply, "0 ADR %d\n", slave_adr+1);
-				if(SendMessage(SLAVE_I, reply) == 0)
+				sprintf(m_mess, "0 ADR %d\n", slave_adr+1);
+				if(SendMessage(SLAVE_I, m_mess) == 0)
 				{
 					sprintf(reply, "SLAVE %d\n", slave_adr);
 					SendMessage(MASTER_I, reply);
@@ -164,8 +162,8 @@ int main(void)
 			else if(strcmp(cmd, "ON") == 0)
 			{
 				// Sends message over to the next slave
-				sprintf(reply, "0 ON %d\n", sec_adr);
-				HAL_UART_Transmit(&SLAVE_UART, (uint8_t*) reply, strlen(reply), 100);
+				sprintf(m_mess, "0 ON %d\n", sec_adr);
+				HAL_UART_Transmit(&SLAVE_UART, (uint8_t*) m_mess, strlen(m_mess), 100);
 
 				// LED is low-active with pin C13
 				if(sec_adr == slave_adr){
@@ -175,7 +173,7 @@ int main(void)
 
 				// Checks if the button is being pressed
 				char pressed = 0;
-				while(pressed == GPIO_PIN_RESET && m_buff[MASTER_I].msg_flag == 1)
+				while(pressed == GPIO_PIN_RESET && main_flag == 0)
 				{
 					pressed = CheckButton();
 				}
@@ -187,6 +185,7 @@ int main(void)
 				// Uses Transmit instead of SendMessage because master communication doesn't need ACK
 				if(pressed)
 				{
+					HAL_Delay(50);
 					sprintf(reply, "PRESSED %d\n", slave_adr);
 					HAL_UART_Transmit(&MASTER_UART, (uint8_t*) reply, strlen(reply), 100);
 				}
@@ -492,7 +491,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		return;
 	}
 
-	// Used when message is out of sync with buffer
+	// Used when message is out of sync with buffer size
 	static uint8_t OOS_check = 0;
 	if(OOS_check)
 	{
@@ -622,6 +621,7 @@ char CheckButton()
 	pressed += HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_1);
 	return pressed;
 }
+
 /* USER CODE END 4 */
 
 /**
