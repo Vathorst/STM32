@@ -48,6 +48,9 @@ typedef struct {
 #define LED_TIM htim2
 
 #define ACK_TIMEOUT 1000
+#define SCORE_DELAY 10000
+#define START_TIME 5000
+#define TIME_INCREMENT 100
 
 #define LED_BLINK 3
 #define LED_TOGGLE 2
@@ -58,9 +61,6 @@ typedef struct {
 #define SLAVE_I 1
 
 #define BLUE_LED ((uint16_t)0x2000)
-//#define RED_LED ((uint16_t)0x4000)
-//#define ORANGE_LED ((uint16_t)0x2000)
-//#define GREEN_LED ((uint16_t)0x1000)
 
 enum state_t {
 	STATE_STR,
@@ -111,11 +111,6 @@ int CheckMsg();
 /* USER CODE BEGIN 0 */
 uint8_t rx_buff[1];
 uint8_t tx_debug[12];	// Used only for debugging
-//uint8_t rec_buff[MSG_MAX_LEN];
-//uint8_t msg_i = 0;				// Index for rec_buff
-//uint8_t msg_flag = 0;
-//uint8_t msg_enable = 0;
-
 uint16_t blink_pin;
 t_module m_buff[2];
 /* USER CODE END 0 */
@@ -218,7 +213,7 @@ int main(void)
 
 	  case STATE_CTR:
 		sprintf(buf, "0 ON %d\n", chosen_button);
-		if(SendCommand(buf, "PRESSED", 5000-(score*100)))
+		if(SendCommand(buf, "PRESSED", START_TIME-(score*TIME_INCREMENT)))
 		{
 			if(atoi((char*)&m_buff[SLAVE_I].rec_buff[8]) == chosen_button)
 			{
@@ -256,7 +251,7 @@ int main(void)
 	HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)"Klaar met uitvoering.\r\n", 23, 100);
 	HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)buf, strlen((char*)buf), 100);
 #endif
-		HAL_Delay(10000);
+		HAL_Delay(SCORE_DELAY);
 		HAL_UART_Transmit(&SCHERM_UART, (uint8_t *)"MENU\r\n", 6, 100);
 		score = 0;
 		state = STATE_STR;
@@ -561,7 +556,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	{
 		m_buff[ix].msg_i = 0;
 		if(rx_buff[0] != '\n')
-
 			OOS_check = 1;
 	}
 
@@ -572,7 +566,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 char CheckTimeout(const char * valid_ans, int timeout)
 {
 	m_buff[SLAVE_I].msg_en = 1;		// Allows communication to the master
-	int tim_cnt = 0;	// Keeps a count of how many times the timer updated, this happens every 100ms
+
+	// Keeps a count of how many times the timer updated
+	// This happens every 100ms and is defined by MSG_TIM settings
+	int tim_cnt = 0;
 
 	// Starts the timer for the timeout function.
 	// Clears flag as a precaution
