@@ -163,41 +163,60 @@ int main(void)
     	SetLed(ORANGE_LED, LED_OFF);
     	SetLed(RED_LED, LED_OFF);
 
-    	HAL_Delay(1000);
-		if((SendCommand("0 ADR 1\n","SLAVE", ACK_TIMEOUT*2)))
-		{
-			no_slaves = atoi((char*)&rec_buff[6]);
-		}
-
-    	else
+    	if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0))  //if user_button is pressed
     	{
-    		HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)"addressering werkt_niet\r\n", 23, 100);
-    		HAL_UART_Transmit(&DEBUG_UART,&rec_buff[6], 23, 100);
-    	}
-		HAL_Delay(10000);
+    		if(no_slaves == 0) //if there are no slaves adressed
+    		{
+				if((SendCommand("0 ADR 1\n","SLAVE", ACK_TIMEOUT*4)))  //adress the slaves
+				{
+					no_slaves = atoi((char*)&rec_buff[6]);  //get the number of slaves
+					#ifdef debug
+						HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)"addressering werkt slave s=", 27, 100);
+						sprintf(debug_msg, " %d\r\n",no_slaves );
+						HAL_UART_Transmit(&DEBUG_UART,(uint8_t*)debug_msg , 6, 100);
+					#endif
+				}
+				else
+				{
+					#ifdef debug
+						HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)"addressering werkt_niet\r\n", 23, 100);
+					#endif
+				}
+    		}
 
-		if(no_slaves)//  && (chosen_button<no_slaves))
-			chosen_button++;
-		else
-		{
-			SetLed(ORANGE_LED, LED_ON);
-			HAL_Delay(1000);
-	    	SendMessage("0 OFF\n");
+			if(no_slaves && (chosen_button<no_slaves)) //if there are slaves, and the current chosen slave exists
+			{
+				chosen_button++; //increment the chosen button
+				#ifdef debug
+					HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)"Test knop =", 23, 100);
+					sprintf(debug_msg, "%d\r\n",chosen_button );
+					HAL_UART_Transmit(&DEBUG_UART,(uint8_t*)debug_msg , 6, 100);
+				#endif
+			}
+			else
+			{
+				chosen_button=1; //set the chosen button to the first slave
+			}
+
+			sprintf(buf, "0 ON %d\n", chosen_button);
+			if(SendCommand(buf, "PRESSED", 10000)) //activate the chosen slave
+			{
+				if((atoi((char*)&rec_buff[8]) == chosen_button)) //if the correct button is pressed
+				{
+					#ifdef debug
+						HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)"Knop ", 23, 100);
+						sprintf(debug_msg, "%d", chosen_button);
+						HAL_UART_Transmit(&DEBUG_UART,(uint8_t*)debug_msg , 2, 100);
+						HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)"werkt\r\n", 23, 100);
+					#endif
+				}
+			else
+				HAL_Delay(250); //generic delay
+
+			SendMessage("0 OFF\n"); //deactivate all slaves
+			}
 		}
-
-    	sprintf(buf, "0 ON %d\n", chosen_button);
-    	if(SendCommand(buf, "PRESSED", 10000))
-    	{
-    		if((atoi((char*)&rec_buff[8]) == chosen_button))
-    		HAL_UART_Transmit(&DEBUG_UART, (uint8_t*)"Werkt",6, 100);
-    		sprintf(debug_msg, "%d\r\n", chosen_button);
-    		HAL_UART_Transmit(&DEBUG_UART,(uint8_t*)debug_msg , 6, 100);
-    	}
-		else
-			HAL_Delay(250);
-
-    	SendMessage("0 OFF\n");
-    }
+  }
   /* USER CODE END 3 */
 }
 
