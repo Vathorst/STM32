@@ -33,6 +33,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#error "This code has been deprecated. Use Master_STM32F1 instead."
 #define MSG_MAX_LEN 16
 
 #define SCHERM_UART huart6
