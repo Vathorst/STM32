@@ -27,56 +27,106 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+
+/**
+  * @brief 	Struct used for separating screen and slave module.
+  */
 typedef struct {
-	uint8_t msg_i;
-	uint8_t msg_en;
-	uint8_t msg_flag;
-	uint8_t rec_buff[MSG_MAX_LEN];
-	UART_HandleTypeDef * used_huart;
+	uint8_t msg_i;						/*!< Index for received messages 				*/
+
+	uint8_t msg_en;						/*!< Enable flag to prevent reading while busy 	*/
+
+	uint8_t msg_flag;					/*!< Message flag to indicate a new message 	*/
+
+	uint8_t rec_buff[MSG_MAX_LEN];		/*!< Buffer for the received message			*/
+
+	UART_HandleTypeDef * used_huart;	/*!< Pointer to the UART struct the module uses */
 }t_module;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+/** @defgroup Mode_Select Input/Output of CheckMsg() function
+  * @{
+  */
+#define HALF 					"180\n"		/*!< String that indicates only half of the slaves must be used.	*/
 
-#define HALF 			"180\n"
+#define HALF_NUM 				1			/*!< Value to indicate half of the buttons are used 			 	*/
+#define FULL_NUM 				2			/*!< Value to indicate all  of the buttons are used					*/
+/**
+  * @}
+  */
 
-#define HALF_NUM 		1
-#define FULL_NUM 		2
+/** @defgroup Used_Peripherials Used Peripherals
+  * @{
+  */
+#define SCHERM_UART 			huart2		/*!< UART  peripheral connected to the screen 				*/
+#define SLAVE_UART 				huart1		/*!< UART  peripheral connected to the slaves 				*/
+//#define DEBUG_UART 			huart2		/*!< UART  peripheral connected to debug PC	 				*/
+#define MSG_TIM 				htim1		/*!< Timer peripheral used for message timeout checking 	*/
+#define LED_TIM 				htim2		/*!< Timer peripheral used for blinking LEDS non-blocking 	*/
+/**
+  * @}
+  */
 
-#define SCHERM_UART 	huart2
-#define SLAVE_UART 		huart1
-//#define DEBUG_UART 	huart2
-#define MSG_TIM 		htim1
-#define LED_TIM 		htim2
+/** @defgroup Timing_Definitions Delay/Timeout times in ms
+  * @{
+  */
+#define ACK_TIMEOUT 			1000		/*!< How long the master waits for an acknowledge from a slave 			*/
+#define SCORE_DELAY 			10000		/*!< How long the master waits for clearing the score					*/
+#define START_TIME 				5000		/*!< Initial time the user has to press a button						*/
+#define TIME_INCREMENT 			100			/*!< How much every point of score subtracts from the total time the	\
+												 user has to press the button										*/
+#define NEXT_BT_TIME			500			/*!< The amount of time the master waits between each button activation */
+/**
+  * @}
+  */
 
-#define ACK_TIMEOUT 	1000
-#define SCORE_DELAY 	10000
-#define START_TIME 		5000
-#define TIME_INCREMENT 	100
-#define NEXT_BT_TIME	500
+/** @defgroup LED_Commands LED Command Definitions
+  * @{
+  */
+#define LED_BLINK 				3			/*!< The command to blink an LED 	*/
+#define LED_TOGGLE 				2			/*!< The command to toggle an LED 	*/
+#define LED_ON 					0			/*!< The command to turn on an LED	*/
+#define LED_OFF 				1			/*!< The command to turn off an LED */
+/**
+  * @}
+  */
 
-#define LED_BLINK 		3
-#define LED_TOGGLE 		2
-#define LED_ON 			0
-#define LED_OFF 		1
+/** @defgroup Buffer_Indexes Buffer Indexes for m_buff
+  * @{
+  */
+#define SCHERM_I 				0			/*!< The index for the screen module */
+#define SLAVE_I 				1			/*!< The index for the slave module  */
+/**
+  * @}
+  */
 
-#define SCHERM_I 		0
-#define SLAVE_I 		1
+/** @defgroup LED_Pin_Definitions LED Pin Definitions
+  * @{
+  */
+#define BLUE_LED 				((uint16_t)0x2000)	/*!< The blue LED pin */
+/**
+  * @}
+  */
 
-#define BLUE_LED 		((uint16_t)0x2000)
-
+/**
+ * @enum state_t
+ * @brief The various states that the master module can be in.
+ *
+ */
 enum state_t {
-	STATE_STR,
-	STATE_ADR,
-	STATE_CHS,
-	STATE_CTR,
-	STATE_ERR,
-	STATE_END,
+	STATE_STR,			/**< Start State				*/
+	STATE_ADR,			/**< Addressing State 			*/
+	STATE_CHS,			/**< Choosing State			  	*/
+	STATE_CTR,			/**< Control and Verify State 	*/
+	STATE_ERR,			/**< Error State 				*/
+	STATE_END,			/**< Ending State				*/
 };
 
 #ifdef DEBUG_UART
-#define debug
+#define debug			/*!< Debug enable */
 #endif
 /* USER CODE END PD */
 
@@ -117,9 +167,15 @@ char CheckMsg();
 uint8_t tx_debug[12];	// Used only for debugging
 #endif
 
+/** @brief rx_buff contains the incoming char */
 uint8_t rx_buff[1];
+/** @brief blink_pin tells LED timer which pin to turn off */
 uint16_t blink_pin;
+/** @brief m_buff are the two buffers for screen/slave message handling*/
 t_module m_buff[2];
+
+
+
 /* USER CODE END 0 */
 
 /**
@@ -169,14 +225,42 @@ int main(void)
 
   uint8_t no_slaves  	= 0;
   enum state_t state	= STATE_STR;
-  uint16_t mode 	 	= 360;
+  uint16_t mode 	 	= FULL_NUM;
   uint8_t score 	 	= 0;
   uint8_t chosen_button = 0;
   char buf[12];
+  /**   <h2><center> Supported Commands </h2></center>
+   	*   <h3>Addressing</h3>
+   	*   Format: 	 <tt>0 ADR 1</tt>\n
+   	*   Definitions: @c 0 sends to @b all slaves. @c ADR is the addressing command. @c 1 is the first address.\n\n
+   	*   Used to give every slave a specific address down the chain.\n
+   	*
+   	*   <h3>Turning On Slaves</h3>
+   	*   Format: 	 <tt>0 ON adr</tt>\n
+   	*   Definitions: @c 0 sends to @b all slaves. @c ON is the turn on command. @c adr specifies which button is correct.\n\n
+   	*   This turns on the buttons of all slaves. Only the @c adr slave will have their buzzer ring.\n
+   	*
+   	*   <h3>Turning Off Slaves</h3>
+   	*   Format:		 <tt>0 OFF</tt>\n
+   	*   Definitions: @c 0 sends to @b all slaves. @c OFF is the turn off command.\n\n
+   	*   			 This command turns off all slaves, used @b AFTER the ON command.\n
+   	*   			 In reality, the slaves don't listen to the specific message, any message will do to turn them off.\n
+   	*   			 This is to prevent a missed "off" command to put the slave in blocking mode.\n
+   	*   			 The alternative would have been to set a timer in the slave to quit.\n
+   	*   			 This however decreases the amount of control the master could have over the slaves.\n
+   	*   			 This compromise had to be made, so that the master is still in control.\n
+   	*
+   	*   <h3>Verify Connection</h3>
+   	*   Format:		 <tt>adr ASK</tt>
+   	*   Definitions: @c adr specifies which slave to send the command to. @c ASK is the command.\n
+   	*   Explanation: This command asks a specific slave to reply with an answer.\n
+   	*   			 This is used to verify the slave is still connected.\n
+   	*   			 \n\n
+    */
 
-  // Srand  needs a seed that differs each startup, no ideas for this have yet been implemented
-  // Not as important, as the MCU won't be reset every time a person plays.
-  // When the device loses and regains power however, the button sequence will always be the same
+  //Needs a seed that differs each startup
+  //Not as important, as the MCU won't be reset every time a person plays.
+  //When the device loses and regains power however, the button sequence will always be the same
   srand(1);
 
   /* USER CODE END 2 */
@@ -187,9 +271,15 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
+	/** <h2><center> State Machine </h2></center> */
     /* USER CODE BEGIN 3 */
 	switch(state)
 	  {
+	  /**  <h3>Start State</h3>
+	    *  @brief Reads incoming messages from the screen module.
+	    *  		  Will switch to addressing state if message is received.
+	    *  		  Mode will indicate if full range of buttons is to be used or only half.
+	    */
 	  case STATE_STR:
 		m_buff[SCHERM_I].msg_en = 1;
 		mode = CheckMsg();
@@ -200,7 +290,11 @@ int main(void)
 			m_buff[SCHERM_I].msg_flag = 0;
 		}
 		break;
-
+	  /**  <h3>Addressing State</h3>
+		*  @brief Will send a command to give an adress to each slave.
+		*  		  If received "slave" back addressing successful.
+		*  		  State will move to Choose if successful, Start if failed.
+		*/
 	  case STATE_ADR:
 		if(SendCommand("0 ADR 1\n","SLAVE", ACK_TIMEOUT*2))
 		{
@@ -210,23 +304,41 @@ int main(void)
 		else
 			state = STATE_STR;
 		break;
-
+	  /**  <h3>Choosing State</h3>
+		*  @brief Will choose a random button based on mode.
+		*  		  Mode was set by start state earlier.
+		*  		  Has a check to make sure there won't be a div/0 error.
+		*  		  Next state will be control or start depending on number of slaves.
+		*/
 	  case STATE_CHS:
 		sprintf(buf, "SCORE =%d\r\n", score);
 		HAL_UART_Transmit(&SCHERM_UART, (uint8_t *) buf, strlen( (char *) buf), 100);
 		if(no_slaves)
 		{
+			// The +1 makes sure 0 is never a chosen button. Slaves start from address 1.
+			// This can be made into a define, if there exists a desire to start from slave 2.
 			chosen_button = ( rand() % (mode == FULL_NUM ? no_slaves : no_slaves >> 1))+1;
 			state = STATE_CTR;
 		}
 		else
 			state = STATE_STR;
 		break;
-
+	  /**  <h3>Control & Verify State</h3>
+		*  @brief Controls the chosen button from Choose State.
+		*  		  Sends out a message for all buttons to turn on.
+		*  		  Specifies the address of chosen button to turn on its speakers.
+		*		  Reads which button is pressed, or if a timeout occurred.
+		*		  If the correct button is pressed, will choose a new button (state choose).
+		*		  If the button was incorrect, will end the game (state end).
+		*		  If no button was pressed in time, will verify connection (state error).
+		*/
 	  case STATE_CTR:
 		sprintf(buf, "0 ON %d\n", chosen_button);
 		if(SendCommand(buf, "PRESSED", START_TIME - ( score * TIME_INCREMENT) ) )
 		{
+			// The reply is PRESSED n, so to read the received number the 8th byte will be used.
+			// P|R|E|S|S|E|D| |n
+			// 0|1|2|3|4|5|6|7|8
 			if(atoi( (char *) &m_buff[SLAVE_I].rec_buff[8]) == chosen_button)
 			{
 				state = STATE_CHS;
@@ -241,12 +353,19 @@ int main(void)
 		SendMessage("0 OFF\n");
 		HAL_Delay(NEXT_BT_TIME);
 		break;
-
+	  /**  <h3>Error State</h3>
+		*  @brief Error state will verify communication works with the chosen slave.
+		*  		  If the slave does not answer to this check, an LED will indicate an error.
+		*  		  No matter the result of the Comm test, the next state will always be END.
+		*/
 	  case STATE_ERR:
 
 		sprintf(buf, "%d ASK\n", chosen_button);
 		if(SendCommand(buf, "ANS", ACK_TIMEOUT*2))
 		{
+			// The answer is ANS n, so to read the received number the 4th byte will be used.
+			// A|N|S| |n
+			// 0|1|2|3|4
 			if(atoi( (char *) &m_buff[SLAVE_I].rec_buff[4] ) == chosen_button)
 				SetLed(BLUE_LED, LED_OFF);
 		}
@@ -254,7 +373,11 @@ int main(void)
 			SetLed(BLUE_LED, LED_ON);
 		state = STATE_END;
 		break;
-
+	  /**  <h3>End State</h3>
+		*  @brief The final state of the program.
+		*  		  Will display the score once and then reset it, along with the screen.
+		*  		  Next state will be returning to start.
+		*/
 	  case STATE_END:
 		sprintf(buf, "SCORE =%d\r\n", score);
 		HAL_UART_Transmit(&SCHERM_UART, (uint8_t *) buf, strlen( (char *) buf), 100);
@@ -512,6 +635,14 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+/**
+ * @fn void HAL_UART_RxCpltCallback(UART_HandleTypeDef*)
+ * @brief
+ *
+ * @pre
+ * @post
+ * @param huart
+ */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	uint8_t ix;
