@@ -25,37 +25,68 @@
 
 /* USER CODE END Includes */
 
+
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+/**
+  * @brief 	Struct used for separating screen and slave module.
+  */
 typedef struct {
-	uint8_t msg_i;
-	uint8_t msg_flag;
-	uint8_t rec_buff[MSG_MAX_LEN];
-	UART_HandleTypeDef * used_huart;
+	uint8_t msg_i;						/*!< Index for received messages 				*/
+
+	uint8_t msg_flag;					/*!< Message flag to indicate a new message 	*/
+
+	uint8_t rec_buff[MSG_MAX_LEN];		/*!< Buffer for the received message			*/
+
+	UART_HandleTypeDef * used_huart;	/*!< Pointer to the UART struct the module uses */
 }t_module;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define MASTER_UART 	huart2
-#define SLAVE_UART 		huart1
+/** @defgroup Used_Peripherials Used Peripherals
+  * @{
+  */
+#define MASTER_UART 				huart2			/*!< UART  peripheral connected to the master 				*/
+#define SLAVE_UART 					huart1			/*!< UART  peripheral connected to the slaves 				*/
+#define SPEAKER_TIM 				htim2			/*!< Timer peripheral for generating PWM to the speaker		*/
+#define MSG_TIM 					htim1			/*!< Timer peripheral used for message timeout checking 	*/
+/**
+  * @}
+  */
 
-#define MASTER_I 		0
-#define SLAVE_I 		1
+/** @defgroup Buffer_Indexes Buffer Indexes for m_buff
+  * @{
+  */
+#define MASTER_I 					0				/*!< The index for the master module */
+#define SLAVE_I 					1				/*!< The index for the slave  module */
+/**
+  * @}
+  */
 
-#define SPEAKER_TIM 	htim2
-#define MSG_TIM 		htim1
+/** @defgroup Button_GPIO Button GPIO Connections and Pins
+  * @{
+  */
+#define BT_GPIO_1 					GPIOA			/*!< GPIO for button 1 */
+#define BT_GPIO_2 					GPIOB			/*!< GPIO for button 2 */
+#define BT_GPIO_3 					GPIOB			/*!< GPIO for button 3 */
 
-#define BT_GPIO_1 		GPIOA
-#define BT_GPIO_2 		GPIOB
-#define BT_GPIO_3 		GPIOB
+#define BT_PIN_1 					GPIO_PIN_7		/*!< Pin for button 1 */
+#define BT_PIN_2 					GPIO_PIN_0		/*!< Pin for button 2 */
+#define BT_PIN_3 					GPIO_PIN_1		/*!< Pin for button 3 */
+/**
+  * @}
+  */
 
-#define BT_PIN_1 		GPIO_PIN_7
-#define BT_PIN_2 		GPIO_PIN_0
-#define BT_PIN_3 		GPIO_PIN_1
-
-#define ACK_TIMEOUT 	500
+/** @defgroup Timing_Definitions Delay/Timeout times in ms
+  * @{
+  */
+#define ACK_TIMEOUT 				500			/*!< How long the slave waits for an acknowledge from another slave		*/
+/**
+  * @}
+  */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -87,10 +118,13 @@ static void MX_TIM2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/** @brief rx_buff contains the incoming char */
 uint8_t rx_buff[1];
+/** @brief flag that enables main */
 uint8_t main_flag = 0;
+/** @brief the address of this slave */
 uint8_t slave_adr = 0;
-
+/** @brief m_buff are the two buffers for screen/slave message handling*/
 t_module m_buff[2];
 /* USER CODE END 0 */
 
@@ -145,13 +179,30 @@ int main(void)
 	{
 		main_flag = 0;
 		m_buff[MASTER_I].msg_flag = 0;
+
 		char reply[MSG_MAX_LEN];
+		/** @var char reply
+				 Container for the reply message to the master.*/
+
 		char m_mess[MSG_MAX_LEN];
+		/** @var char m_mess
+				 Container for messages to the next slave.*/
+
 		char cmd[4];
+		/** @var char cmd
+				 Container for the dissected command.*/
+
 		char sec_adr;
-		char adr = DisectCommand(cmd, &sec_adr);
+		/** @var char sec_adr
+				 Used to store the secondary address stored in some messages.*/
+
+		// Dissects the message that arrived from the master side.
+		char adr = DissectCommand(cmd, &sec_adr);
 		if(adr == 0)
 		{
+			/** <h3>Adressing Command</h3>
+			 *  Format: <tt>0 ADR x</tt>
+						 */
 			if(strcmp(cmd, "ADR") == 0)
 			{
 				slave_adr = sec_adr;
@@ -552,7 +603,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	HAL_UART_Receive_IT(huart, rx_buff, 1);
 }
 
-char DisectCommand(char * cmd, char * sec_adr)
+char DissectCommand(char * cmd, char * sec_adr)
 {
 	// Reads the global message buffer and splits string up to three parts
 	// These are the address, the command and the optional second address for advanced commands
