@@ -179,30 +179,37 @@ int main(void)
 	{
 		main_flag = 0;
 		m_buff[MASTER_I].msg_flag = 0;
-
-		char reply[MSG_MAX_LEN];
-		/** @var char reply
+		/** <h2><center>Local Variables</h2></center> */
+		/** <b>char reply</b>
 				 Container for the reply message to the master.*/
+		char reply[MSG_MAX_LEN];
 
-		char m_mess[MSG_MAX_LEN];
-		/** @var char m_mess
+		/** <b>char m_mess</b>
 				 Container for messages to the next slave.*/
+		char m_mess[MSG_MAX_LEN];
 
-		char cmd[4];
-		/** @var char cmd
+		/** <b>char cmd</b>
 				 Container for the dissected command.*/
+		char cmd[4];
 
-		char sec_adr;
-		/** @var char sec_adr
+		/** <b>char sec_adr</b>
 				 Used to store the secondary address stored in some messages.*/
+		char sec_adr;
+
 
 		// Dissects the message that arrived from the master side.
 		char adr = DissectCommand(cmd, &sec_adr);
 		if(adr == 0)
 		{
-			/** <h3>Adressing Command</h3>
-			 *  Format: <tt>0 ADR x</tt>
-						 */
+			/** <h2><center>Command Functions and Replies</h2></center> */
+			/** <h3>Addressing Command</h3>
+			 *  Format: 			<tt>0 ADR x</tt>\n
+			 *  Forward to Slave: 	<tt>0 ADR x+1</tt>\n
+			 *  Reply to Master:	<tt>SLAVE x</tt>, But only if Reply to Slave didn't receive ACK.\n
+			 *  					Will copy the address specified in @c x into its own address buffer @c slave_adr.\n
+			 *  					Will then send command with @c x+1 to the next slave.
+			 *  					If an @c ACK isn't received in time, will reply to the master instead.\n
+			 */
 			if(strcmp(cmd, "ADR") == 0)
 			{
 				slave_adr = sec_adr;
@@ -213,23 +220,29 @@ int main(void)
 					SendMessage(MASTER_I, reply);
 				}
 			}
+			/** <h3>Turn On Command</h3>
+			 *  Format:				<tt>0 ON n</tt>
+			 *  Forward to Slave:	<tt>0 ON n</tt>
+			 *  Reply to Master:	<tt>PRESSED x</tt> But only when the button is pressed.\n
+			 *  					Will activate the buttons and if @c slave_adr is the same as @c n will activate buzzer.
+			 *  					Always forwards the message to the next slave. Doesn't require ACK checking so uses HAL.\n
+			 *  					Will deactivate if a message is received from the master, or send <tt>PRESSED x</tt>.\n
+			 *
+						 */
 			else if(strcmp(cmd, "ON") == 0)
 			{
 				// Sends message over to the next slave
 				sprintf(m_mess, "0 ON %d\n", sec_adr);
 				HAL_UART_Transmit(&SLAVE_UART, (uint8_t* ) m_mess, strlen(m_mess), 100);
 
-				// LED is low-active with pin C13
-				if(sec_adr == slave_adr){
+				// Activates the speaker PWM
+				if(sec_adr == slave_adr)
 					HAL_TIM_PWM_Start(&SPEAKER_TIM, TIM_CHANNEL_1);
-					HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-				}
 
 				// Checks if the button is being pressed
 				char pressed = 0;
 				while(pressed == GPIO_PIN_RESET && main_flag == 0)
 					pressed = CheckButton();
-
 
 				// Waits until the button is released
 				while(CheckButton());
@@ -243,8 +256,7 @@ int main(void)
 					HAL_UART_Transmit(&MASTER_UART, (uint8_t*) reply, strlen(reply), 100);
 				}
 
-				// Turns the LED off (low-active)
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+				// Turn the speaker Off
 				HAL_TIM_PWM_Stop(&SPEAKER_TIM, TIM_CHANNEL_1);
 			}
 
