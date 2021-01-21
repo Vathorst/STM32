@@ -637,14 +637,18 @@ static void MX_GPIO_Init(void)
 
 /**
  * @fn void HAL_UART_RxCpltCallback(UART_HandleTypeDef*)
- * @brief
- *
- * @pre
- * @post
- * @param huart
+ * @brief Called when a character is received from a uart.
+ * 		  This char is stored as an array of rx_buff, with an index of 1.
+ * 		  Will put the char in the correct buffer and check if the message is complete.
+ * 		  Will reactivate the uart after char is handled.
+ * @pre	  UARTS are turned on and waiting for interrupt.
+ * @post  Char is stored and UART called under interrupt again.
+ * @param huart The huart that called the callback
  */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
+	// Selects the correct module struct to copy the char into.
+	// This is marked by "ix" which is index.
 	uint8_t ix;
 	if(		huart == m_buff[SCHERM_I].used_huart)
 		ix = SCHERM_I;
@@ -681,11 +685,17 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		if(m_buff[ix].msg_i == 0)
 			memset(m_buff[ix].rec_buff, 0, sizeof(m_buff[ix].rec_buff));
 
+		// Comm blink
     	SetLed(BLUE_LED, LED_BLINK);
 
+    	// Coppies char into local buffer
     	m_buff[ix].rec_buff[m_buff[ix].msg_i] = rx_buff[0];
-		if(rx_buff[0] == '\n')
+
+    	// Checks if message is finished
+    	if(rx_buff[0] == '\n')
 		{
+    		// Will send an Acknowledge to the slave
+    		// Not necessary, as the slave can't do anything if the connection with the master is broken.
 			if(huart == &SLAVE_UART && strcmp("ACK\n", (char *) m_buff[ix].rec_buff) != 0)
 				HAL_UART_Transmit(&SLAVE_UART, (uint8_t *) "ACK\n", 4, 100);
 			m_buff[ix].msg_i 	= 0;
@@ -710,6 +720,19 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	HAL_UART_Receive_IT(huart, rx_buff, 1);
 }
 
+/**
+ * @fn char CheckTimeout(const char*, int)
+ * @brief	Function will be called when a message is expected.
+ * 			Used to verify the answer received from the slave module.
+ * 			Also uses a timer to check for a timeout.
+ *
+ * @pre		Message has been sent that requires a reply.
+ * @post	Answer has been received and verified.
+ * @param valid_ans The expected answer for the slave module.
+ * @param timeout 	The time the slave has to give an answer. Uses increments of 100ms.
+ * @return  Returns a non-zero character if correct message arrived in time.
+ * 			Returns zero if the message was incorrect or it didn't arrive in time.
+ */
 char CheckTimeout(const char * valid_ans, int timeout)
 {
 	m_buff[SLAVE_I].msg_en = 1;		// Allows communication to the master
@@ -749,6 +772,9 @@ char CheckTimeout(const char * valid_ans, int timeout)
 		HAL_UART_Transmit(&DEBUG_UART, (uint8_t *) "Received: ", 10, 100);
 		HAL_UART_Transmit(&DEBUG_UART, (uint8_t *) m_buff[SLAVE_I].rec_buff, strlen( (char *) m_buff[SLAVE_I].rec_buff), 100);
 #endif
+		// Some commands expect an unknown number (i.e. how many slaves are active)
+		// So this command only checks if the received message CONTAINS the correct answer.
+		// To make sure it checks the message verbatim, add a \n to the end of the expected answer.
 		if(strstr( (char * ) m_buff[SLAVE_I].rec_buff, valid_ans) != NULL)
 			return 1;
 #ifdef debug
@@ -762,10 +788,19 @@ char CheckTimeout(const char * valid_ans, int timeout)
 #endif
 
 	// if the earlier return statement didn't fire, return 0, indicating either a timeout or a wrong answer
-	return 0;		// implicit else
+	return 0;
 
 }
 
+/**
+ * @fn char SendMessage(const char*)
+ * @brief 		Sends a message to the slaves and waits for an acknowledge.
+ *
+ * @pre 		none
+ * @post 		Message has been sent
+ * @param msg	The string to send to the slaves
+ * @return		Returns 1 if acknowledge was received, else 0.
+ */
 char SendMessage(const char * msg)
 {
 #ifdef debug
@@ -783,6 +818,19 @@ char SendMessage(const char * msg)
 	return (CheckTimeout("ACK\n", ACK_TIMEOUT) );
 }
 
+/**
+ * @fn char SendCommand(const char*, const char*, int)
+ * @brief 	Expanded version of the SendMessage command.
+ * 			This command calls SendMessage and if that succeeded calls CheckTimout.
+ * 			The user inputs what command they want to send, what answer they expect and how long to wait for a timeout.
+ *
+ * @pre 	none
+ * @post 	Messages are sent to slaves.
+ * @param cmd	The string for the command to send to the slaves.
+ * @param ans	The string for the expected answer from the slaves.
+ * @param timeout	How long the process will wait for the expected answer.
+ * @return  1 if success, 0 if failed.
+ */
 char SendCommand(const char * cmd, const char * ans, int timeout)
 {
 	if(SendMessage(cmd) )
@@ -791,6 +839,18 @@ char SendCommand(const char * cmd, const char * ans, int timeout)
 	return 0;
 }
 
+/**
+ * @fn void SetLed(uint16_t, uint8_t)
+ * @brief Used to control the LEDs using global defines.
+ * 		  Mostly useful for the blinking functionality.
+ * 		  This activates a timer that will turn the LED off after 100ms.
+ * 		  This makes it so LEDs can blink without halting the execution of the program.
+ *
+ * @pre   none
+ * @post  LED state changed
+ * @param led_pin Which pin to toggle (Should use a define as input)
+ * @param state What state the LED should be. On/Off/Toggle or Blink
+ */
 void SetLed(uint16_t led_pin, uint8_t state)
 {
 	switch(state)
@@ -821,6 +881,14 @@ void SetLed(uint16_t led_pin, uint8_t state)
 	}
 }
 
+/**
+ * @fn char CheckMsg()
+ * @brief  Checks if the screen sent a message.
+ *
+ * @pre 	The screen UART has to be turned on
+ * @post 	none
+ * @return  HALF_NUM if the message was "180\n", FULL_NUM in every other case.
+ */
 char CheckMsg()
 {
 	if(m_buff[SCHERM_I].msg_flag == 0)
