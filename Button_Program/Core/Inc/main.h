@@ -58,7 +58,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-char DisectCommand(char * cmd, char * sec_adr);
+char DissectCommand(char * cmd, char * sec_adr);
 char SendMessage(uint8_t ix, const char * msg);
 char CheckTimeout(const char * valid_ans, int timeout, uint8_t ix);
 char CheckButton();

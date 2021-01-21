@@ -174,8 +174,6 @@ uint16_t blink_pin;
 /** @brief m_buff are the two buffers for screen/slave message handling*/
 t_module m_buff[2];
 
-
-
 /* USER CODE END 0 */
 
 /**
