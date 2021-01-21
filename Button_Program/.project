@@ -31,4 +31,17 @@
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 		<nature>com.st.stm32cube.ide.mcu.MCUCubeIdeServicesRevAev2ProjectNature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>index.html</name>
+			<type>1</type>
+			<locationURI>PROJECT_LOC/html/index.html</locationURI>
+		</link>
+	</linkedResources>
+	<variableList>
+		<variable>
+			<name>copy_PROJECT_LOC</name>
+			<value>$%7BPARENT-1-PROJECT_LOC%7D/Master_STM32F1</value>
+		</variable>
+	</variableList>
 </projectDescription>
