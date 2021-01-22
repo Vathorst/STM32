@@ -57,11 +57,13 @@ typedef struct {
   * @}
   */
 
-/** @defgroup Buffer_Indexes Buffer Indexes for m_buff
+/** @defgroup Message_Defines Message Related Defines
   * @{
   */
-#define MASTER_I 					0				/*!< The index for the master module */
-#define SLAVE_I 					1				/*!< The index for the slave  module */
+#define MASTER_I 					0				/*!< The index for the master module 									*/
+#define SLAVE_I 					1				/*!< The index for the slave  module 									*/
+#define ACK_TIMEOUT 				500				/*!< How long the slave waits for an acknowledge from another slave		*/
+#define CMD_MAX_LEN 				3				/*!< How many chars in the message buffer are reserved for the command  */
 /**
   * @}
   */
@@ -80,21 +82,6 @@ typedef struct {
   * @}
   */
 
-/** @defgroup Timing_Definitions Delay/Timeout times in ms
-  * @{
-  */
-#define ACK_TIMEOUT 				500			/*!< How long the slave waits for an acknowledge from another slave		*/
-/**
-  * @}
-  */
-
-/** @defgroup Message_Defines Message related Defines
-  * @{
-  */
-#define CMD_MAX_LEN 3
-/**
-  * @}
-  */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -229,8 +216,8 @@ int main(void)
 				}
 			}
 			/** <h3>Turn On Command</h3>
-			 *  Format:				<tt>0 ON n</tt>
-			 *  Forward to Slave:	<tt>0 ON n</tt>
+			 *  Format:				<tt>0 ON n</tt>\n
+			 *  Forward to Slave:	<tt>0 ON n</tt>\n
 			 *  Reply to Master:	<tt>PRESSED x</tt> But only when the button is pressed.\n
 			 *  					Will activate the buttons and if @c slave_adr is the same as @c n will activate buzzer.
 			 *  					Always forwards the message to the next slave. Doesn't require ACK checking so uses HAL.\n
@@ -268,13 +255,26 @@ int main(void)
 				HAL_TIM_PWM_Stop(&SPEAKER_TIM, TIM_CHANNEL_1);
 			}
 
-			// If the button was pressed, process wont be in the forwarding mode
-			// Would be neater if this was done in callback function
+			/** <h3>Turn Off Command</h3>
+			 * 	Format:				<tt>0 OFF</tt>\n
+			 * 	Forward to Slave:	<tt>0 OFF</tt>\n
+			 * 	Reply to Master	:	None\n
+			 * 						Will copy the message to the next slaves.
+			 * 						Used as placeholder to turn off the slaves after the ON command has been sent.\n
+			 *
+			 */
 			else if(strcmp(cmd, "OFF") == 0)
 				SendMessage(SLAVE_I, "0 OFF\n");
 		}
 		else
 		{
+			/** <h3>Verify Connection Command</tt>
+			 * 	Format:				<tt>x ASK</tt>\n
+			 * 	Forward to Slave:	None\n
+			 * 	Reply to Master :	<tt>ANS x</tt>\n
+			 * 						Will reply to the master personally to verify the connection.\n
+			 *
+			 */
 			if(strcmp((char*)cmd, "ASK") == 0)
 			{
 				sprintf(reply, "ANS %d\n", slave_adr);
@@ -672,14 +672,28 @@ char DissectCommand(char * cmd, char * sec_adr)
 	return adr;
 }
 
+/**
+ * @fn char CheckTimeout(const char*, int, uint8_t)
+ * @brief			Function will be called when a message is expected.
+ * 					Used to verify the answer received from the specified module.
+ * 					Also uses a timer to check for a timeout.
+ * @pre 			Message has been sent that expects a reply
+ * @post 			Answer has been received from the correct module and verified.
+ * @param valid_ans The expected answer from the selected module.
+ * @param timeout	The time the selected module has to answer. Uses increments of 100ms
+ * @param ix		The index for the m_buff array, used to select the module.
+ * @return			1 if correct reply received in time, 0 if not.
+ */
 char CheckTimeout(const char * valid_ans, int timeout, uint8_t ix)
 {
-	int tim_cnt = 0;
-
 	// Starts the timer for the timeout function.
 	// Clears flag as a precaution
 	HAL_TIM_Base_Start(&MSG_TIM);
 	__HAL_TIM_CLEAR_FLAG(&MSG_TIM, TIM_FLAG_UPDATE);
+
+	// Keeps a count of how many times the timer updated
+	// This happens every 100ms and is defined by MSG_TIM settings
+	int tim_cnt = 0;
 
 	// When a message has been received "msg_flag" will be 1
 	// This loop will count for "timeout" milliseconds
@@ -699,7 +713,11 @@ char CheckTimeout(const char * valid_ans, int timeout, uint8_t ix)
 	// Reads the incoming message (if received), and compares it to the expected answer
 	if(m_buff[ix].msg_flag)
 	{
-		m_buff[ix].msg_flag = 0;
+		m_buff[ix].msg_flag = 0;	// To prevent reading the same message multiple times.
+
+		// Some commands expect an unknown number (i.e. how many slaves are active)
+		// So this command only checks if the received message CONTAINS the correct answer.
+		// To make sure it checks the message verbatim, add a \n to the end of the expected answer.
 		if(strstr(valid_ans, (char *) m_buff[ix].rec_buff) != NULL)
 			return 1;
 	}
@@ -709,12 +727,31 @@ char CheckTimeout(const char * valid_ans, int timeout, uint8_t ix)
 
 }
 
+/**
+ * @fn char SendMessage(uint8_t, const char*)
+ * @brief 		Sends a message to the slaves and waits for an acknowledge.
+ *
+ * @pre 		none
+ * @post 		Message has been sent
+ * @param ix	The index indicating which module to send the message to. (Defined as MASTER_I or SLAVE_I)
+ * @param msg	The message to send to the selected module.
+ * @return		Returns 1 if ACK received, 0 if not.
+ */
 char SendMessage(uint8_t ix, const char * msg)
 {
+	// Every message sent to other slaves requires "ACK\n" as an answer.
 	HAL_UART_Transmit(m_buff[ix].used_huart, (uint8_t *) msg, strlen(msg), 100);
 	return (CheckTimeout("ACK\n", ACK_TIMEOUT, ix));
 }
 
+/**
+ * @fn char CheckButton()
+ * @brief 	Checks each pin connected to the button.
+ * 			The defines for this are messy, as the pins are placed on GPIOA and GPIOB.
+ * @pre 	The "ON" message was received.
+ * @post 	The button is either pressed or not pressed.
+ * @return	Non-zero if pressed. Zero if not.
+ */
 char CheckButton()
 {
 	char pressed = 0;
