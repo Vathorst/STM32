@@ -87,6 +87,14 @@ typedef struct {
 /**
   * @}
   */
+
+/** @defgroup Message_Defines Message related Defines
+  * @{
+  */
+#define CMD_MAX_LEN 3
+/**
+  * @}
+  */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -190,7 +198,7 @@ int main(void)
 
 		/** <b>char cmd</b>
 				 Container for the dissected command.*/
-		char cmd[4];
+		char cmd[CMD_MAX_LEN+1];
 
 		/** <b>char sec_adr</b>
 				 Used to store the secondary address stored in some messages.*/
@@ -528,8 +536,20 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/**
+ * @fn void HAL_UART_RxCpltCallback(UART_HandleTypeDef*)
+ * @brief Called when a character is received from a uart.
+ * 		  This char is stored as an array of rx_buff, with an index of 1.
+ * 		  Will put the char in the correct buffer and check if the message is complete.
+ * 		  Will reactivate the uart after char is handled.
+ * @pre	  UARTS are turned on and waiting for interrupt.
+ * @post  Char is stored and UART called under interrupt again.
+ * @param huart The huart that called the callback
+ */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
+	// Selects the correct module struct to copy the char into.
+	// This is marked by "ix" which is index.
 	uint8_t ix;
 	if(huart == m_buff[MASTER_I].used_huart)
 		ix = MASTER_I;
@@ -539,7 +559,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 	else
 	{
-		HAL_UART_Receive_IT(huart, rx_buff, 1);
+		HAL_UART_Receive_IT(huart, rx_buff, 1);		// Always has to be called after finishing the callback
 		return;
 	}
 	// Currently there exists a bug where the master sends out a null character after initializing.
@@ -574,32 +594,39 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		// Check if message is complete
 		if(rx_buff[0] == '\n')
 		{
+			// Resets the index of the message to the first value 0
 			m_buff[ix].msg_i = 0;
 
+			// Activates the message flag required by CheckTimeout if the message was an ack.
+			// Doesn't activate the main flag however, as it is not a command that needs responding to.
 			if(strcmp("ACK\n", (char *) m_buff[ix].rec_buff) == 0)
 				m_buff[ix].msg_flag = 1;
 
+			// If the master sent a message...
 			else if(m_buff[ix].used_huart == &MASTER_UART)
 			{
+				// Returns an ACK
 				HAL_UART_Transmit(huart, (uint8_t*)"ACK\n", 4, 100);
 
-				// Compares the message address the the address of the slave
+				// Gets the address out of the message
 				int msg_adr = atoi((char *) m_buff[ix].rec_buff);
 
+				// If the address of the message isn't 0 or equal to the slaves address, the message will be sent to the next slave.
 				if(msg_adr != 0 && msg_adr != slave_adr)
 					HAL_UART_Transmit(&SLAVE_UART, (uint8_t *) m_buff[ix].rec_buff, strlen( (char *) m_buff[ix].rec_buff), 100);
 
 				else
 				{
-					m_buff[ix].msg_flag = 1;
-					main_flag = 1;
+					m_buff[ix].msg_flag = 1;	// Used by CheckTimeout
+					main_flag = 1;				// Used to answer commands in the main
 				}
 			}
+			// If a slave sent the message, it will always go to the master side.
 			else if(m_buff[ix].used_huart == &SLAVE_UART)
 				HAL_UART_Transmit(&MASTER_UART, (uint8_t *) m_buff[ix].rec_buff, strlen( (char *) m_buff[ix].rec_buff), 100);
 		}
 		else
-			m_buff[ix].msg_i++;
+			m_buff[ix].msg_i++;		// Index for the message buffer
 	}
 
 	// Exception clause for handling messages larger than the dedicated buffer
@@ -615,18 +642,33 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	HAL_UART_Receive_IT(huart, rx_buff, 1);
 }
 
+/**
+ * @fn char DissectCommand(char*, char*)
+ * @brief 			DissectCommand takes the command as input (from the global buffer) and returns the address and command letters.
+ * 					If the command contained a second address it will be written inside sec_adr.
+ *
+ * @pre 			A command targeted at this specific slave arrived from the master module side.
+ * @post 			The message is dissected and its component parts stored in the relevant variables.
+ * @param cmd		The address where the command letters will be stored once finished
+ * @param sec_adr	The address where the second address will be stored if found.
+ * @return			The address found at the start of the message.
+ */
 char DissectCommand(char * cmd, char * sec_adr)
 {
-	// Reads the global message buffer and splits string up to three parts
+	// Reads the global master message buffer and splits string up to three parts
 	// These are the address, the command and the optional second address for advanced commands
 	char * cmd_tok;
 
-	char adr = atoi(strtok( (char *) m_buff[MASTER_I].rec_buff, " ") );
-	cmd_tok = strtok(NULL, " ");
-	*sec_adr = atoi(strtok(NULL, " ") );
+	// strtok splits the message for every time it encounters a used defined char.
+	// In this case the user defined char is a space character, because all info in the message is split by spaces.
+	char adr = atoi(strtok( (char *) m_buff[MASTER_I].rec_buff, " ") );	// Atoi returns the number at the start (address)
+	cmd_tok = strtok(NULL, " ");										// Gets the letters of the command (cmd)
+	*sec_adr = atoi(strtok(NULL, " ") );								// Gets the letters of the second address
 
+	// To make sure string operations can be performed on the command, a 0 character is added to the end of it.
+	// This does mean commands are now limited to 3 characters because this is now hard coded in here.
 	sprintf(cmd, "%s", cmd_tok);
-	cmd[3] = '\0';
+	cmd[CMD_MAX_LEN] = '\0';
 	return adr;
 }
 
