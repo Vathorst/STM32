@@ -249,11 +249,14 @@ int main(void)
    	*   			 This compromise had to be made, so that the master is still in control.\n
    	*
    	*   <h3>Verify Connection</h3>
-   	*   Format:		 <tt>adr ASK</tt>
-   	*   Definitions: @c adr specifies which slave to send the command to. @c ASK is the command.\n
-   	*   Explanation: This command asks a specific slave to reply with an answer.\n
+   	*   Format:		 <tt>adr ASK</tt>\n
+   	*   Definitions: @c adr specifies which slave to send the command to. @c ASK is the command.\n\n
+   	*   			 This command asks a specific slave to reply with an answer.\n
    	*   			 This is used to verify the slave is still connected.\n
    	*   			 \n\n
+   	*
+   	*   @attention	 <center><b>New commands have a max length of 3 characters. This can be changed in the slave code.</b></center>
+   	*
     */
 
   //Needs a seed that differs each startup
@@ -269,7 +272,7 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
-	/** <h2><center> State Machine </h2></center> */
+	/** \n<h2><center> State Machine </center></h2> */
     /* USER CODE BEGIN 3 */
 	switch(state)
 	  {
