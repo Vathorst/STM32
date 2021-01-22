@@ -1,0 +1,420 @@
+\hypertarget{main_8c}{}\doxysection{Core/\+Src/main.c File Reference}
+\label{main_8c}\index{Core/Src/main.c@{Core/Src/main.c}}
+
+
+\+: Main program body  
+
+
+{\ttfamily \#include \char`\"{}main.\+h\char`\"{}}\newline
+\doxysubsection*{Data Structures}
+\begin{DoxyCompactItemize}
+\item 
+struct \mbox{\hyperlink{structt__module}{t\+\_\+module}}
+\begin{DoxyCompactList}\small\item\em Struct used for separating screen and slave module. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\#define \mbox{\hyperlink{group___mode___select_ga37c4c48ff47f0838f64b5a1fb3c803b2}{H\+A\+LF}}~\char`\"{}180\textbackslash{}n\char`\"{}
+\item 
+\#define \mbox{\hyperlink{group___mode___select_gaf9c1faad7448f0a38fbf00c4fabd96ee}{H\+A\+L\+F\+\_\+\+N\+UM}}~1
+\item 
+\#define \mbox{\hyperlink{group___mode___select_ga5c617053fd20a3bae198334dc6ac09d1}{F\+U\+L\+L\+\_\+\+N\+UM}}~2
+\item 
+\#define \mbox{\hyperlink{group___used___peripherials_gafa79cee4bc998a7804af1a3169b095f0}{S\+C\+H\+E\+R\+M\+\_\+\+U\+A\+RT}}~huart2
+\item 
+\#define \mbox{\hyperlink{group___used___peripherials_ga4e019eaeae6edb6e0cf18ef7284de198}{S\+L\+A\+V\+E\+\_\+\+U\+A\+RT}}~huart1
+\item 
+\#define \mbox{\hyperlink{group___used___peripherials_gab911ad79166ddb3b57718c1c9165a78d}{M\+S\+G\+\_\+\+T\+IM}}~htim1
+\item 
+\#define \mbox{\hyperlink{group___used___peripherials_gac1619442929fedce3c9378dd3eb01bfb}{L\+E\+D\+\_\+\+T\+IM}}~htim2
+\item 
+\#define \mbox{\hyperlink{group___timing___definitions_ga5e53751a27267574b92f23d01951a259}{A\+C\+K\+\_\+\+T\+I\+M\+E\+O\+UT}}~1000
+\item 
+\#define \mbox{\hyperlink{group___timing___definitions_ga3c15658c410376370604187eb2b5562b}{S\+C\+O\+R\+E\+\_\+\+D\+E\+L\+AY}}~10000
+\item 
+\#define \mbox{\hyperlink{group___timing___definitions_ga8cfe47a626c35a858e809a41829a2cd4}{S\+T\+A\+R\+T\+\_\+\+T\+I\+ME}}~5000
+\item 
+\#define \mbox{\hyperlink{group___timing___definitions_gad29ebde3c8bd7568e2e1e7d32bf7a3f3}{T\+I\+M\+E\+\_\+\+I\+N\+C\+R\+E\+M\+E\+NT}}~100
+\item 
+\#define \mbox{\hyperlink{group___timing___definitions_ga59749d915719383f0f61588ca8da0a94}{N\+E\+X\+T\+\_\+\+B\+T\+\_\+\+T\+I\+ME}}~500
+\item 
+\#define \mbox{\hyperlink{group___l_e_d___commands_ga997bb3a60c98e24f915d9b7b6c179a3a}{L\+E\+D\+\_\+\+B\+L\+I\+NK}}~3
+\item 
+\#define \mbox{\hyperlink{group___l_e_d___commands_gafa3a1cd44351e5baf3f4520aa5444a18}{L\+E\+D\+\_\+\+T\+O\+G\+G\+LE}}~2
+\item 
+\#define \mbox{\hyperlink{group___l_e_d___commands_gaf2e697ac60e05813d45ea2c9c9e79c25}{L\+E\+D\+\_\+\+ON}}~0
+\item 
+\#define \mbox{\hyperlink{group___l_e_d___commands_ga80700bb63bd56ebabbb4728aa433fd29}{L\+E\+D\+\_\+\+O\+FF}}~1
+\item 
+\#define \mbox{\hyperlink{group___buffer___indexes_ga00160bb8ea6d6ce3765dbb30885aea98}{S\+C\+H\+E\+R\+M\+\_\+I}}~0
+\item 
+\#define \mbox{\hyperlink{group___buffer___indexes_ga751ebf6e960b88228073fcc2685257ef}{S\+L\+A\+V\+E\+\_\+I}}~1
+\item 
+\#define \mbox{\hyperlink{group___l_e_d___pin___definitions_ga41c7fcbe209a1c236fd1b8e35bd8b55a}{B\+L\+U\+E\+\_\+\+L\+ED}}~((uint16\+\_\+t)0x2000)
+\end{DoxyCompactItemize}
+\doxysubsection*{Enumerations}
+\begin{DoxyCompactItemize}
+\item 
+enum \mbox{\hyperlink{main_8c_aa0aafed44fec19806d8f9ad834be1248}{state\+\_\+t}} \{ \newline
+\mbox{\hyperlink{main_8c_aa0aafed44fec19806d8f9ad834be1248a42aba49f19261d75ae58e7907b76334b}{S\+T\+A\+T\+E\+\_\+\+S\+TR}}, 
+\mbox{\hyperlink{main_8c_aa0aafed44fec19806d8f9ad834be1248a3c9186548a739b26d367651c0d99e70a}{S\+T\+A\+T\+E\+\_\+\+A\+DR}}, 
+\mbox{\hyperlink{main_8c_aa0aafed44fec19806d8f9ad834be1248a4822b1312afe6d98ef995e4fb9779391}{S\+T\+A\+T\+E\+\_\+\+C\+HS}}, 
+\mbox{\hyperlink{main_8c_aa0aafed44fec19806d8f9ad834be1248a26b6d341015457541c9eaf6fb742531c}{S\+T\+A\+T\+E\+\_\+\+C\+TR}}, 
+\newline
+\mbox{\hyperlink{main_8c_aa0aafed44fec19806d8f9ad834be1248adceebbc176186b2bbeb1b53731478bcd}{S\+T\+A\+T\+E\+\_\+\+E\+RR}}, 
+\mbox{\hyperlink{main_8c_aa0aafed44fec19806d8f9ad834be1248af3f9f84c5967b769ca17cdc6c523f7fe}{S\+T\+A\+T\+E\+\_\+\+E\+ND}}
+ \}
+\begin{DoxyCompactList}\small\item\em The various states that the master module can be in. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \mbox{\hyperlink{main_8c_a70af21c671abfcc773614a9a4f63d920}{System\+Clock\+\_\+\+Config}} (void)
+\begin{DoxyCompactList}\small\item\em System Clock Configuration. \end{DoxyCompactList}\item 
+char \mbox{\hyperlink{main_8c_a50b8685f844049dcf93a7257fd76c81c}{Check\+Timeout}} (const char $\ast$valid\+\_\+ans, int timeout)
+\begin{DoxyCompactList}\small\item\em Function will be called when a message is expected. Used to verify the answer received from the slave module. Also uses a timer to check for a timeout. \end{DoxyCompactList}\item 
+char \mbox{\hyperlink{main_8c_a76f45df70ed53a2b4c17aa3c60fff0d1}{Send\+Message}} (const char $\ast$msg)
+\begin{DoxyCompactList}\small\item\em Sends a message to the slaves and waits for an acknowledge. \end{DoxyCompactList}\item 
+char \mbox{\hyperlink{main_8c_af75e49c23f7837b52a29915a0cf91208}{Send\+Command}} (const char $\ast$cmd, const char $\ast$ans, int timeout)
+\begin{DoxyCompactList}\small\item\em Expanded version of the Send\+Message command. This command calls Send\+Message and if that succeeded calls Check\+Timout. The user inputs what command they want to send, what answer they expect and how long to wait for a timeout. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{main_8c_a720d1625c6409023659f9515ce44d6e1}{Set\+Led}} (uint16\+\_\+t led\+\_\+pin, uint8\+\_\+t state)
+\begin{DoxyCompactList}\small\item\em Used to control the L\+E\+Ds using global defines. Mostly useful for the blinking functionality. This activates a timer that will turn the L\+ED off after 100ms. This makes it so L\+E\+Ds can blink without halting the execution of the program. \end{DoxyCompactList}\item 
+char \mbox{\hyperlink{main_8c_a775aad1a1ae286c9785d2cbfd135663d}{Check\+Msg}} ()
+\begin{DoxyCompactList}\small\item\em Checks if the screen sent a message. \end{DoxyCompactList}\item 
+int \mbox{\hyperlink{main_8c_a840291bc02cba5474a4cb46a9b9566fe}{main}} (void)
+\begin{DoxyCompactList}\small\item\em The application entry point. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{main_8c_ae494a9643f29b87d6d81e5264e60e57b}{H\+A\+L\+\_\+\+U\+A\+R\+T\+\_\+\+Rx\+Cplt\+Callback}} (U\+A\+R\+T\+\_\+\+Handle\+Type\+Def $\ast$huart)
+\begin{DoxyCompactList}\small\item\em Called when a character is received from a uart. This char is stored as an array of rx\+\_\+buff, with an index of 1. Will put the char in the correct buffer and check if the message is complete. Will reactivate the uart after char is handled. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{main_8c_a1730ffe1e560465665eb47d9264826f9}{Error\+\_\+\+Handler}} (void)
+\begin{DoxyCompactList}\small\item\em This function is executed in case of error occurrence. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{main_8c_a25fc663547539bc49fecc0011bd76ab5}\label{main_8c_a25fc663547539bc49fecc0011bd76ab5}} 
+T\+I\+M\+\_\+\+Handle\+Type\+Def {\bfseries htim1}
+\item 
+\mbox{\Hypertarget{main_8c_a2c80fd5510e2990a59a5c90d745c716c}\label{main_8c_a2c80fd5510e2990a59a5c90d745c716c}} 
+T\+I\+M\+\_\+\+Handle\+Type\+Def {\bfseries htim2}
+\item 
+\mbox{\Hypertarget{main_8c_a2cf715bef37f7e8ef385a30974a5f0d5}\label{main_8c_a2cf715bef37f7e8ef385a30974a5f0d5}} 
+U\+A\+R\+T\+\_\+\+Handle\+Type\+Def {\bfseries huart1}
+\item 
+\mbox{\Hypertarget{main_8c_aa9479c261d65eecedd3d9582f7f0f89c}\label{main_8c_aa9479c261d65eecedd3d9582f7f0f89c}} 
+U\+A\+R\+T\+\_\+\+Handle\+Type\+Def {\bfseries huart2}
+\item 
+\mbox{\Hypertarget{main_8c_a4ad1b3c04a7af5e5219bfa1a17bb838a}\label{main_8c_a4ad1b3c04a7af5e5219bfa1a17bb838a}} 
+uint8\+\_\+t \mbox{\hyperlink{main_8c_a4ad1b3c04a7af5e5219bfa1a17bb838a}{rx\+\_\+buff}} \mbox{[}1\mbox{]}
+\begin{DoxyCompactList}\small\item\em rx\+\_\+buff contains the incoming char \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{main_8c_a31895faa3f888363fa7986d7d88e0b80}\label{main_8c_a31895faa3f888363fa7986d7d88e0b80}} 
+uint16\+\_\+t \mbox{\hyperlink{main_8c_a31895faa3f888363fa7986d7d88e0b80}{blink\+\_\+pin}}
+\begin{DoxyCompactList}\small\item\em blink\+\_\+pin tells L\+ED timer which pin to turn off \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{main_8c_acc57ce7041029359f6061fd99547e5d2}\label{main_8c_acc57ce7041029359f6061fd99547e5d2}} 
+\mbox{\hyperlink{structt__module}{t\+\_\+module}} \mbox{\hyperlink{main_8c_acc57ce7041029359f6061fd99547e5d2}{m\+\_\+buff}} \mbox{[}2\mbox{]}
+\begin{DoxyCompactList}\small\item\em m\+\_\+buff are the two buffers for screen/slave message handling \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\+: Main program body 
+
+\begin{DoxyAttention}{Attention}
+
+\end{DoxyAttention}
+\doxysubsubsection*{\begin{center}\copyright{} Copyright (c) 2021 S\+T\+Microelectronics. All rights reserved.\end{center} }
+
+This software component is licensed by ST under B\+SD 3-\/Clause license, the \char`\"{}\+License\char`\"{}; You may not use this file except in compliance with the License. You may obtain a copy of the License at\+: opensource.\+org/licenses/\+B\+S\+D-\/3-\/\+Clause 
+
+\doxysubsection{Enumeration Type Documentation}
+\mbox{\Hypertarget{main_8c_aa0aafed44fec19806d8f9ad834be1248}\label{main_8c_aa0aafed44fec19806d8f9ad834be1248}} 
+\index{main.c@{main.c}!state\_t@{state\_t}}
+\index{state\_t@{state\_t}!main.c@{main.c}}
+\doxysubsubsection{\texorpdfstring{state\_t}{state\_t}}
+{\footnotesize\ttfamily enum \mbox{\hyperlink{main_8c_aa0aafed44fec19806d8f9ad834be1248}{state\+\_\+t}}}
+
+
+
+The various states that the master module can be in. 
+
+\begin{DoxyEnumFields}{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{STATE\_STR@{STATE\_STR}!main.c@{main.c}}\index{main.c@{main.c}!STATE\_STR@{STATE\_STR}}}\mbox{\Hypertarget{main_8c_aa0aafed44fec19806d8f9ad834be1248a42aba49f19261d75ae58e7907b76334b}\label{main_8c_aa0aafed44fec19806d8f9ad834be1248a42aba49f19261d75ae58e7907b76334b}} 
+S\+T\+A\+T\+E\+\_\+\+S\+TR&Start State ~\newline
+ \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{STATE\_ADR@{STATE\_ADR}!main.c@{main.c}}\index{main.c@{main.c}!STATE\_ADR@{STATE\_ADR}}}\mbox{\Hypertarget{main_8c_aa0aafed44fec19806d8f9ad834be1248a3c9186548a739b26d367651c0d99e70a}\label{main_8c_aa0aafed44fec19806d8f9ad834be1248a3c9186548a739b26d367651c0d99e70a}} 
+S\+T\+A\+T\+E\+\_\+\+A\+DR&Addressing State ~\newline
+ \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{STATE\_CHS@{STATE\_CHS}!main.c@{main.c}}\index{main.c@{main.c}!STATE\_CHS@{STATE\_CHS}}}\mbox{\Hypertarget{main_8c_aa0aafed44fec19806d8f9ad834be1248a4822b1312afe6d98ef995e4fb9779391}\label{main_8c_aa0aafed44fec19806d8f9ad834be1248a4822b1312afe6d98ef995e4fb9779391}} 
+S\+T\+A\+T\+E\+\_\+\+C\+HS&Choosing State ~\newline
+ \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{STATE\_CTR@{STATE\_CTR}!main.c@{main.c}}\index{main.c@{main.c}!STATE\_CTR@{STATE\_CTR}}}\mbox{\Hypertarget{main_8c_aa0aafed44fec19806d8f9ad834be1248a26b6d341015457541c9eaf6fb742531c}\label{main_8c_aa0aafed44fec19806d8f9ad834be1248a26b6d341015457541c9eaf6fb742531c}} 
+S\+T\+A\+T\+E\+\_\+\+C\+TR&Control and Verify State ~\newline
+ \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{STATE\_ERR@{STATE\_ERR}!main.c@{main.c}}\index{main.c@{main.c}!STATE\_ERR@{STATE\_ERR}}}\mbox{\Hypertarget{main_8c_aa0aafed44fec19806d8f9ad834be1248adceebbc176186b2bbeb1b53731478bcd}\label{main_8c_aa0aafed44fec19806d8f9ad834be1248adceebbc176186b2bbeb1b53731478bcd}} 
+S\+T\+A\+T\+E\+\_\+\+E\+RR&Error State ~\newline
+ \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{STATE\_END@{STATE\_END}!main.c@{main.c}}\index{main.c@{main.c}!STATE\_END@{STATE\_END}}}\mbox{\Hypertarget{main_8c_aa0aafed44fec19806d8f9ad834be1248af3f9f84c5967b769ca17cdc6c523f7fe}\label{main_8c_aa0aafed44fec19806d8f9ad834be1248af3f9f84c5967b769ca17cdc6c523f7fe}} 
+S\+T\+A\+T\+E\+\_\+\+E\+ND&Ending State ~\newline
+ \\
+\hline
+
+\end{DoxyEnumFields}
+
+
+\doxysubsection{Function Documentation}
+\mbox{\Hypertarget{main_8c_a775aad1a1ae286c9785d2cbfd135663d}\label{main_8c_a775aad1a1ae286c9785d2cbfd135663d}} 
+\index{main.c@{main.c}!CheckMsg@{CheckMsg}}
+\index{CheckMsg@{CheckMsg}!main.c@{main.c}}
+\doxysubsubsection{\texorpdfstring{CheckMsg()}{CheckMsg()}}
+{\footnotesize\ttfamily char Check\+Msg (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})}
+
+
+
+Checks if the screen sent a message. 
+
+\begin{DoxyPrecond}{Precondition}
+The screen U\+A\+RT has to be turned on 
+\end{DoxyPrecond}
+\begin{DoxyPostcond}{Postcondition}
+none 
+\end{DoxyPostcond}
+\begin{DoxyReturn}{Returns}
+H\+A\+L\+F\+\_\+\+N\+UM if the message was \char`\"{}180\textbackslash{}n\char`\"{}, F\+U\+L\+L\+\_\+\+N\+UM in every other case. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{main_8c_a50b8685f844049dcf93a7257fd76c81c}\label{main_8c_a50b8685f844049dcf93a7257fd76c81c}} 
+\index{main.c@{main.c}!CheckTimeout@{CheckTimeout}}
+\index{CheckTimeout@{CheckTimeout}!main.c@{main.c}}
+\doxysubsubsection{\texorpdfstring{CheckTimeout()}{CheckTimeout()}}
+{\footnotesize\ttfamily char Check\+Timeout (\begin{DoxyParamCaption}\item[{const char $\ast$}]{valid\+\_\+ans,  }\item[{int}]{timeout }\end{DoxyParamCaption})}
+
+
+
+Function will be called when a message is expected. Used to verify the answer received from the slave module. Also uses a timer to check for a timeout. 
+
+\begin{DoxyPrecond}{Precondition}
+Message has been sent that requires a reply. 
+\end{DoxyPrecond}
+\begin{DoxyPostcond}{Postcondition}
+Answer has been received and verified. 
+\end{DoxyPostcond}
+
+\begin{DoxyParams}{Parameters}
+{\em valid\+\_\+ans} & The expected answer for the slave module. \\
+\hline
+{\em timeout} & The time the slave has to give an answer. Uses increments of 100ms. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Returns a non-\/zero character if correct message arrived in time. Returns zero if the message was incorrect or it didn\textquotesingle{}t arrive in time. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{main_8c_a1730ffe1e560465665eb47d9264826f9}\label{main_8c_a1730ffe1e560465665eb47d9264826f9}} 
+\index{main.c@{main.c}!Error\_Handler@{Error\_Handler}}
+\index{Error\_Handler@{Error\_Handler}!main.c@{main.c}}
+\doxysubsubsection{\texorpdfstring{Error\_Handler()}{Error\_Handler()}}
+{\footnotesize\ttfamily void Error\+\_\+\+Handler (\begin{DoxyParamCaption}\item[{void}]{ }\end{DoxyParamCaption})}
+
+
+
+This function is executed in case of error occurrence. 
+
+
+\begin{DoxyRetVals}{Return values}
+{\em None} & \\
+\hline
+\end{DoxyRetVals}
+\mbox{\Hypertarget{main_8c_ae494a9643f29b87d6d81e5264e60e57b}\label{main_8c_ae494a9643f29b87d6d81e5264e60e57b}} 
+\index{main.c@{main.c}!HAL\_UART\_RxCpltCallback@{HAL\_UART\_RxCpltCallback}}
+\index{HAL\_UART\_RxCpltCallback@{HAL\_UART\_RxCpltCallback}!main.c@{main.c}}
+\doxysubsubsection{\texorpdfstring{HAL\_UART\_RxCpltCallback()}{HAL\_UART\_RxCpltCallback()}}
+{\footnotesize\ttfamily void H\+A\+L\+\_\+\+U\+A\+R\+T\+\_\+\+Rx\+Cplt\+Callback (\begin{DoxyParamCaption}\item[{U\+A\+R\+T\+\_\+\+Handle\+Type\+Def $\ast$}]{huart }\end{DoxyParamCaption})}
+
+
+
+Called when a character is received from a uart. This char is stored as an array of rx\+\_\+buff, with an index of 1. Will put the char in the correct buffer and check if the message is complete. Will reactivate the uart after char is handled. 
+
+\begin{DoxyPrecond}{Precondition}
+U\+A\+R\+TS are turned on and waiting for interrupt. 
+\end{DoxyPrecond}
+\begin{DoxyPostcond}{Postcondition}
+Char is stored and U\+A\+RT called under interrupt again. 
+\end{DoxyPostcond}
+
+\begin{DoxyParams}{Parameters}
+{\em huart} & The huart that called the callback \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{main_8c_a840291bc02cba5474a4cb46a9b9566fe}\label{main_8c_a840291bc02cba5474a4cb46a9b9566fe}} 
+\index{main.c@{main.c}!main@{main}}
+\index{main@{main}!main.c@{main.c}}
+\doxysubsubsection{\texorpdfstring{main()}{main()}}
+{\footnotesize\ttfamily int main (\begin{DoxyParamCaption}\item[{void}]{ }\end{DoxyParamCaption})}
+
+
+
+The application entry point. 
+
+
+\begin{DoxyRetVals}{Return values}
+{\em int} & \\
+\hline
+\end{DoxyRetVals}
+\doxysubsubsection*{\begin{center} Supported Commands \end{center} }
+
+\begin{center}\end{center}  \doxyparagraph*{Addressing}
+
+Format\+: {\ttfamily 0 A\+DR 1}~\newline
+Definitions\+: {\ttfamily 0} sends to {\bfseries{all}} slaves. {\ttfamily A\+DR} is the addressing command. {\ttfamily 1} is the first address.~\newline
+~\newline
+Used to give every slave a specific address down the chain.~\newline
+ \doxyparagraph*{Turning On Slaves}
+
+Format\+: {\ttfamily 0 ON adr}~\newline
+Definitions\+: {\ttfamily 0} sends to {\bfseries{all}} slaves. {\ttfamily ON} is the turn on command. {\ttfamily adr} specifies which button is correct.~\newline
+~\newline
+This turns on the buttons of all slaves. Only the {\ttfamily adr} slave will have their buzzer ring.~\newline
+ \doxyparagraph*{Turning Off Slaves}
+
+Format\+: {\ttfamily 0 O\+FF}~\newline
+Definitions\+: {\ttfamily 0} sends to {\bfseries{all}} slaves. {\ttfamily O\+FF} is the turn off command.~\newline
+~\newline
+ This command turns off all slaves, used {\bfseries{A\+F\+T\+ER}} the ON command.~\newline
+ In reality, the slaves don\textquotesingle{}t listen to the specific message, any message will do to turn them off.~\newline
+ This is to prevent a missed \char`\"{}off\char`\"{} command to put the slave in blocking mode.~\newline
+ The alternative would have been to set a timer in the slave to quit.~\newline
+ This however decreases the amount of control the master could have over the slaves.~\newline
+ This compromise had to be made, so that the master is still in control.~\newline
+ \doxyparagraph*{Verify Connection}
+
+Format\+: {\ttfamily adr A\+SK}~\newline
+Definitions\+: {\ttfamily adr} specifies which slave to send the command to. {\ttfamily A\+SK} is the command.~\newline
+This command asks a specific slave to reply with an answer.~\newline
+ This is used to verify the slave is still connected.~\newline
+ ~\newline
+~\newline
+ \begin{DoxyAttention}{Attention}
+\begin{center}{\bfseries{New commands have a max length of 3 characters. This can be changed in the slave code.}}\end{center} 
+\end{DoxyAttention}
+~\newline
+\doxysubsubsection*{\begin{center} State Machine \end{center} }
+
+\doxyparagraph*{Start State}
+
+Reads incoming messages from the screen module. Will switch to addressing state if message is received. Mode will indicate if full range of buttons is to be used or only half.
+
+\doxyparagraph*{Addressing State}
+
+Will send a command to give an adress to each slave. If received \char`\"{}slave\char`\"{} back addressing successful. State will move to Choose if successful, Start if failed.
+
+\doxyparagraph*{Choosing State}
+
+Will choose a random button based on mode. Mode was set by start state earlier. Has a check to make sure there won\textquotesingle{}t be a div/0 error. Next state will be control or start depending on number of slaves.
+
+\doxyparagraph*{Control \& Verify State}
+
+Controls the chosen button from Choose State. Sends out a message for all buttons to turn on. Specifies the address of chosen button to turn on its speakers. Reads which button is pressed, or if a timeout occurred. If the correct button is pressed, will choose a new button (state choose). If the button was incorrect, will end the game (state end). If no button was pressed in time, will verify connection (state error).
+
+\doxyparagraph*{Error State}
+
+Error state will verify communication works with the chosen slave. If the slave does not answer to this check, an L\+ED will indicate an error. No matter the result of the Comm test, the next state will always be E\+ND.
+
+\doxyparagraph*{End State}
+
+The final state of the program. Will display the score once and then reset it, along with the screen. Next state will be returning to start.\mbox{\Hypertarget{main_8c_af75e49c23f7837b52a29915a0cf91208}\label{main_8c_af75e49c23f7837b52a29915a0cf91208}} 
+\index{main.c@{main.c}!SendCommand@{SendCommand}}
+\index{SendCommand@{SendCommand}!main.c@{main.c}}
+\doxysubsubsection{\texorpdfstring{SendCommand()}{SendCommand()}}
+{\footnotesize\ttfamily char Send\+Command (\begin{DoxyParamCaption}\item[{const char $\ast$}]{cmd,  }\item[{const char $\ast$}]{ans,  }\item[{int}]{timeout }\end{DoxyParamCaption})}
+
+
+
+Expanded version of the Send\+Message command. This command calls Send\+Message and if that succeeded calls Check\+Timout. The user inputs what command they want to send, what answer they expect and how long to wait for a timeout. 
+
+\begin{DoxyPrecond}{Precondition}
+none 
+\end{DoxyPrecond}
+\begin{DoxyPostcond}{Postcondition}
+Messages are sent to slaves. 
+\end{DoxyPostcond}
+
+\begin{DoxyParams}{Parameters}
+{\em cmd} & The string for the command to send to the slaves. \\
+\hline
+{\em ans} & The string for the expected answer from the slaves. \\
+\hline
+{\em timeout} & How long the process will wait for the expected answer. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+1 if success, 0 if failed. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{main_8c_a76f45df70ed53a2b4c17aa3c60fff0d1}\label{main_8c_a76f45df70ed53a2b4c17aa3c60fff0d1}} 
+\index{main.c@{main.c}!SendMessage@{SendMessage}}
+\index{SendMessage@{SendMessage}!main.c@{main.c}}
+\doxysubsubsection{\texorpdfstring{SendMessage()}{SendMessage()}}
+{\footnotesize\ttfamily char Send\+Message (\begin{DoxyParamCaption}\item[{const char $\ast$}]{msg }\end{DoxyParamCaption})}
+
+
+
+Sends a message to the slaves and waits for an acknowledge. 
+
+\begin{DoxyPrecond}{Precondition}
+none 
+\end{DoxyPrecond}
+\begin{DoxyPostcond}{Postcondition}
+Message has been sent 
+\end{DoxyPostcond}
+
+\begin{DoxyParams}{Parameters}
+{\em msg} & The string to send to the slaves \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Returns 1 if acknowledge was received, else 0. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{main_8c_a720d1625c6409023659f9515ce44d6e1}\label{main_8c_a720d1625c6409023659f9515ce44d6e1}} 
+\index{main.c@{main.c}!SetLed@{SetLed}}
+\index{SetLed@{SetLed}!main.c@{main.c}}
+\doxysubsubsection{\texorpdfstring{SetLed()}{SetLed()}}
+{\footnotesize\ttfamily void Set\+Led (\begin{DoxyParamCaption}\item[{uint16\+\_\+t}]{led\+\_\+pin,  }\item[{uint8\+\_\+t}]{state }\end{DoxyParamCaption})}
+
+
+
+Used to control the L\+E\+Ds using global defines. Mostly useful for the blinking functionality. This activates a timer that will turn the L\+ED off after 100ms. This makes it so L\+E\+Ds can blink without halting the execution of the program. 
+
+\begin{DoxyPrecond}{Precondition}
+none 
+\end{DoxyPrecond}
+\begin{DoxyPostcond}{Postcondition}
+L\+ED state changed 
+\end{DoxyPostcond}
+
+\begin{DoxyParams}{Parameters}
+{\em led\+\_\+pin} & Which pin to toggle (Should use a define as input) \\
+\hline
+{\em state} & What state the L\+ED should be. On/\+Off/\+Toggle or Blink \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{main_8c_a70af21c671abfcc773614a9a4f63d920}\label{main_8c_a70af21c671abfcc773614a9a4f63d920}} 
+\index{main.c@{main.c}!SystemClock\_Config@{SystemClock\_Config}}
+\index{SystemClock\_Config@{SystemClock\_Config}!main.c@{main.c}}
+\doxysubsubsection{\texorpdfstring{SystemClock\_Config()}{SystemClock\_Config()}}
+{\footnotesize\ttfamily void System\+Clock\+\_\+\+Config (\begin{DoxyParamCaption}\item[{void}]{ }\end{DoxyParamCaption})}
+
+
+
+System Clock Configuration. 
+
+
+\begin{DoxyRetVals}{Return values}
+{\em None} & \\
+\hline
+\end{DoxyRetVals}
+Initializes the R\+CC Oscillators according to the specified parameters in the R\+C\+C\+\_\+\+Osc\+Init\+Type\+Def structure.
+
+Initializes the C\+PU, A\+HB and A\+PB buses clocks

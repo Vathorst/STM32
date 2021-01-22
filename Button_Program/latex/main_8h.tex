@@ -1,0 +1,172 @@
+\hypertarget{main_8h}{}\doxysection{Core/\+Inc/main.h File Reference}
+\label{main_8h}\index{Core/Inc/main.h@{Core/Inc/main.h}}
+
+
+\+: Header for \mbox{\hyperlink{main_8c}{main.\+c}} file. This file contains the common defines of the application.  
+
+
+{\ttfamily \#include \char`\"{}stm32f1xx\+\_\+hal.\+h\char`\"{}}\newline
+{\ttfamily \#include $<$string.\+h$>$}\newline
+{\ttfamily \#include $<$stdlib.\+h$>$}\newline
+{\ttfamily \#include $<$stdio.\+h$>$}\newline
+\doxysubsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{main_8h_a2ad9de7ccad1dc3102460a8090f17ed0}\label{main_8h_a2ad9de7ccad1dc3102460a8090f17ed0}} 
+\#define {\bfseries M\+S\+G\+\_\+\+M\+A\+X\+\_\+\+L\+EN}~16
+\end{DoxyCompactItemize}
+\doxysubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \mbox{\hyperlink{main_8h_ae70bce6c39d0b570a7523b86738cec4b}{H\+A\+L\+\_\+\+T\+I\+M\+\_\+\+Msp\+Post\+Init}} (T\+I\+M\+\_\+\+Handle\+Type\+Def $\ast$htim)
+\item 
+void \mbox{\hyperlink{main_8h_a1730ffe1e560465665eb47d9264826f9}{Error\+\_\+\+Handler}} (void)
+\begin{DoxyCompactList}\small\item\em This function is executed in case of error occurrence. \end{DoxyCompactList}\item 
+char \mbox{\hyperlink{main_8h_af62fa4e35d0dde868f1d0574f606e05c}{Dissect\+Command}} (char $\ast$cmd, char $\ast$sec\+\_\+adr)
+\begin{DoxyCompactList}\small\item\em Dissect\+Command takes the command as input (from the global buffer) and returns the address and command letters. If the command contained a second address it will be written inside sec\+\_\+adr. \end{DoxyCompactList}\item 
+char \mbox{\hyperlink{main_8h_a7f26af6c5e07e052758d490deaa22e83}{Send\+Message}} (uint8\+\_\+t ix, const char $\ast$msg)
+\begin{DoxyCompactList}\small\item\em Sends a message to the slaves and waits for an acknowledge. \end{DoxyCompactList}\item 
+char \mbox{\hyperlink{main_8h_a2fe55fb76f3994b020048f0dc407105b}{Check\+Timeout}} (const char $\ast$valid\+\_\+ans, int timeout, uint8\+\_\+t ix)
+\begin{DoxyCompactList}\small\item\em Function will be called when a message is expected. Used to verify the answer received from the specified module. Also uses a timer to check for a timeout. \end{DoxyCompactList}\item 
+char \mbox{\hyperlink{main_8h_a272c9e8c4960938e33d48dc5195ead5c}{Check\+Button}} ()
+\begin{DoxyCompactList}\small\item\em Checks each pin connected to the button. The defines for this are messy, as the pins are placed on G\+P\+I\+OA and G\+P\+I\+OB. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\+: Header for \mbox{\hyperlink{main_8c}{main.\+c}} file. This file contains the common defines of the application. 
+
+\begin{DoxyAttention}{Attention}
+
+\end{DoxyAttention}
+\doxysubsubsection*{\begin{center}\copyright{} Copyright (c) 2020 S\+T\+Microelectronics. All rights reserved.\end{center} }
+
+This software component is licensed by ST under B\+SD 3-\/Clause license, the \char`\"{}\+License\char`\"{}; You may not use this file except in compliance with the License. You may obtain a copy of the License at\+: opensource.\+org/licenses/\+B\+S\+D-\/3-\/\+Clause 
+
+\doxysubsection{Function Documentation}
+\mbox{\Hypertarget{main_8h_a272c9e8c4960938e33d48dc5195ead5c}\label{main_8h_a272c9e8c4960938e33d48dc5195ead5c}} 
+\index{main.h@{main.h}!CheckButton@{CheckButton}}
+\index{CheckButton@{CheckButton}!main.h@{main.h}}
+\doxysubsubsection{\texorpdfstring{CheckButton()}{CheckButton()}}
+{\footnotesize\ttfamily char Check\+Button (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})}
+
+
+
+Checks each pin connected to the button. The defines for this are messy, as the pins are placed on G\+P\+I\+OA and G\+P\+I\+OB. 
+
+\begin{DoxyPrecond}{Precondition}
+The \char`\"{}\+O\+N\char`\"{} message was received. 
+\end{DoxyPrecond}
+\begin{DoxyPostcond}{Postcondition}
+The button is either pressed or not pressed. 
+\end{DoxyPostcond}
+\begin{DoxyReturn}{Returns}
+Non-\/zero if pressed. Zero if not. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{main_8h_a2fe55fb76f3994b020048f0dc407105b}\label{main_8h_a2fe55fb76f3994b020048f0dc407105b}} 
+\index{main.h@{main.h}!CheckTimeout@{CheckTimeout}}
+\index{CheckTimeout@{CheckTimeout}!main.h@{main.h}}
+\doxysubsubsection{\texorpdfstring{CheckTimeout()}{CheckTimeout()}}
+{\footnotesize\ttfamily char Check\+Timeout (\begin{DoxyParamCaption}\item[{const char $\ast$}]{valid\+\_\+ans,  }\item[{int}]{timeout,  }\item[{uint8\+\_\+t}]{ix }\end{DoxyParamCaption})}
+
+
+
+Function will be called when a message is expected. Used to verify the answer received from the specified module. Also uses a timer to check for a timeout. 
+
+\begin{DoxyPrecond}{Precondition}
+Message has been sent that expects a reply 
+\end{DoxyPrecond}
+\begin{DoxyPostcond}{Postcondition}
+Answer has been received from the correct module and verified. 
+\end{DoxyPostcond}
+
+\begin{DoxyParams}{Parameters}
+{\em valid\+\_\+ans} & The expected answer from the selected module. \\
+\hline
+{\em timeout} & The time the selected module has to answer. Uses increments of 100ms \\
+\hline
+{\em ix} & The index for the m\+\_\+buff array, used to select the module. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+1 if correct reply received in time, 0 if not. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{main_8h_af62fa4e35d0dde868f1d0574f606e05c}\label{main_8h_af62fa4e35d0dde868f1d0574f606e05c}} 
+\index{main.h@{main.h}!DissectCommand@{DissectCommand}}
+\index{DissectCommand@{DissectCommand}!main.h@{main.h}}
+\doxysubsubsection{\texorpdfstring{DissectCommand()}{DissectCommand()}}
+{\footnotesize\ttfamily char Dissect\+Command (\begin{DoxyParamCaption}\item[{char $\ast$}]{cmd,  }\item[{char $\ast$}]{sec\+\_\+adr }\end{DoxyParamCaption})}
+
+
+
+Dissect\+Command takes the command as input (from the global buffer) and returns the address and command letters. If the command contained a second address it will be written inside sec\+\_\+adr. 
+
+\begin{DoxyPrecond}{Precondition}
+A command targeted at this specific slave arrived from the master module side. 
+\end{DoxyPrecond}
+\begin{DoxyPostcond}{Postcondition}
+The message is dissected and its component parts stored in the relevant variables. 
+\end{DoxyPostcond}
+
+\begin{DoxyParams}{Parameters}
+{\em cmd} & The address where the command letters will be stored once finished \\
+\hline
+{\em sec\+\_\+adr} & The address where the second address will be stored if found. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The address found at the start of the message. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{main_8h_a1730ffe1e560465665eb47d9264826f9}\label{main_8h_a1730ffe1e560465665eb47d9264826f9}} 
+\index{main.h@{main.h}!Error\_Handler@{Error\_Handler}}
+\index{Error\_Handler@{Error\_Handler}!main.h@{main.h}}
+\doxysubsubsection{\texorpdfstring{Error\_Handler()}{Error\_Handler()}}
+{\footnotesize\ttfamily void Error\+\_\+\+Handler (\begin{DoxyParamCaption}\item[{void}]{ }\end{DoxyParamCaption})}
+
+
+
+This function is executed in case of error occurrence. 
+
+
+\begin{DoxyRetVals}{Return values}
+{\em None} & \\
+\hline
+\end{DoxyRetVals}
+\mbox{\Hypertarget{main_8h_ae70bce6c39d0b570a7523b86738cec4b}\label{main_8h_ae70bce6c39d0b570a7523b86738cec4b}} 
+\index{main.h@{main.h}!HAL\_TIM\_MspPostInit@{HAL\_TIM\_MspPostInit}}
+\index{HAL\_TIM\_MspPostInit@{HAL\_TIM\_MspPostInit}!main.h@{main.h}}
+\doxysubsubsection{\texorpdfstring{HAL\_TIM\_MspPostInit()}{HAL\_TIM\_MspPostInit()}}
+{\footnotesize\ttfamily void H\+A\+L\+\_\+\+T\+I\+M\+\_\+\+Msp\+Post\+Init (\begin{DoxyParamCaption}\item[{T\+I\+M\+\_\+\+Handle\+Type\+Def $\ast$}]{htim }\end{DoxyParamCaption})}
+
+File Name \+: stm32f1xx\+\_\+hal\+\_\+msp.\+c Description \+: This file provides code for the M\+SP Initialization and de-\/\+Initialization codes.
+
+\begin{DoxyAttention}{Attention}
+
+\end{DoxyAttention}
+\doxysubsubsection*{\begin{center}\copyright{} Copyright (c) 2021 S\+T\+Microelectronics. All rights reserved.\end{center} }
+
+This software component is licensed by ST under B\+SD 3-\/Clause license, the \char`\"{}\+License\char`\"{}; You may not use this file except in compliance with the License. You may obtain a copy of the License at\+: opensource.\+org/licenses/\+B\+S\+D-\/3-\/\+Clause T\+I\+M2 G\+P\+IO Configuration P\+A0-\/\+W\+K\+UP -\/-\/-\/---$>$ T\+I\+M2\+\_\+\+C\+H1\mbox{\Hypertarget{main_8h_a7f26af6c5e07e052758d490deaa22e83}\label{main_8h_a7f26af6c5e07e052758d490deaa22e83}} 
+\index{main.h@{main.h}!SendMessage@{SendMessage}}
+\index{SendMessage@{SendMessage}!main.h@{main.h}}
+\doxysubsubsection{\texorpdfstring{SendMessage()}{SendMessage()}}
+{\footnotesize\ttfamily char Send\+Message (\begin{DoxyParamCaption}\item[{uint8\+\_\+t}]{ix,  }\item[{const char $\ast$}]{msg }\end{DoxyParamCaption})}
+
+
+
+Sends a message to the slaves and waits for an acknowledge. 
+
+\begin{DoxyPrecond}{Precondition}
+none 
+\end{DoxyPrecond}
+\begin{DoxyPostcond}{Postcondition}
+Message has been sent 
+\end{DoxyPostcond}
+
+\begin{DoxyParams}{Parameters}
+{\em ix} & The index indicating which module to send the message to. (Defined as M\+A\+S\+T\+E\+R\+\_\+I or S\+L\+A\+V\+E\+\_\+I) \\
+\hline
+{\em msg} & The message to send to the selected module. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Returns 1 if A\+CK received, 0 if not. 
+\end{DoxyReturn}
