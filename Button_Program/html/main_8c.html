@@ -378,9 +378,23 @@ Reply to Master: <code>SLAVE x</code>, But only if Reply to Slave didn't receive
  Will then send command with <code>x+1</code> to the next slave. If an <code>ACK</code> isn't received in time, will reply to the master instead.<br  />
 </p>
 <h3>Turn On Command</h3>
-<p>Format: <code>0 ON n</code> Forward to Slave: <code>0 ON n</code> Reply to Master: <code>PRESSED x</code> But only when the button is pressed.<br  />
+<p>Format: <code>0 ON n</code><br  />
+Forward to Slave: <code>0 ON n</code><br  />
+Reply to Master: <code>PRESSED x</code> But only when the button is pressed.<br  />
  Will activate the buttons and if <code>slave_adr</code> is the same as <code>n</code> will activate buzzer. Always forwards the message to the next slave. Doesn't require ACK checking so uses HAL.<br  />
  Will deactivate if a message is received from the master, or send <code>PRESSED x</code>.<br  />
+</p>
+<h3>Turn Off Command</h3>
+<p>Format: <code>0 OFF</code><br  />
+Forward to Slave: <code>0 OFF</code><br  />
+Reply to Master : None<br  />
+ Will copy the message to the next slaves. Used as placeholder to turn off the slaves after the ON command has been sent.<br  />
+</p>
+<h3>Verify Connection Command</h3>
+<p>Format: <code>x ASK</code><br  />
+Forward to Slave: None<br  />
+Reply to Master : <code>ANS x</code><br  />
+ Will reply to the master personally to verify the connection.<br  />
 </p>
 
 </div>

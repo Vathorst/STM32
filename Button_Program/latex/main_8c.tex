@@ -252,9 +252,27 @@ Reply to Master\+: {\ttfamily S\+L\+A\+VE x}, But only if Reply to Slave didn\te
 
 \doxyparagraph*{Turn On Command}
 
-Format\+: {\ttfamily 0 ON n} Forward to Slave\+: {\ttfamily 0 ON n} Reply to Master\+: {\ttfamily P\+R\+E\+S\+S\+ED x} But only when the button is pressed.~\newline
+Format\+: {\ttfamily 0 ON n}~\newline
+Forward to Slave\+: {\ttfamily 0 ON n}~\newline
+Reply to Master\+: {\ttfamily P\+R\+E\+S\+S\+ED x} But only when the button is pressed.~\newline
  Will activate the buttons and if {\ttfamily slave\+\_\+adr} is the same as {\ttfamily n} will activate buzzer. Always forwards the message to the next slave. Doesn\textquotesingle{}t require A\+CK checking so uses H\+AL.~\newline
  Will deactivate if a message is received from the master, or send {\ttfamily P\+R\+E\+S\+S\+ED x}.~\newline
+
+
+\doxyparagraph*{Turn Off Command}
+
+Format\+: {\ttfamily 0 O\+FF}~\newline
+Forward to Slave\+: {\ttfamily 0 O\+FF}~\newline
+Reply to Master \+: None~\newline
+ Will copy the message to the next slaves. Used as placeholder to turn off the slaves after the ON command has been sent.~\newline
+
+
+\doxyparagraph*{Verify Connection Command}
+
+Format\+: {\ttfamily x A\+SK}~\newline
+Forward to Slave\+: None~\newline
+Reply to Master \+: {\ttfamily A\+NS x}~\newline
+ Will reply to the master personally to verify the connection.~\newline
 \mbox{\Hypertarget{main_8c_a7f26af6c5e07e052758d490deaa22e83}\label{main_8c_a7f26af6c5e07e052758d490deaa22e83}} 
 \index{main.c@{main.c}!SendMessage@{SendMessage}}
 \index{SendMessage@{SendMessage}!main.c@{main.c}}
