@@ -269,7 +269,7 @@ int main(void)
 		}
 		else
 		{
-			/** <h3>Verify Connection Command</tt>
+			/** <h3>Verify Connection Command</h3>
 			 * 	Format:				<tt>x ASK</tt>\n
 			 * 	Forward to Slave:	None\n
 			 * 	Reply to Master :	<tt>ANS x</tt>\n
