@@ -121,6 +121,7 @@ uint8_t main_flag = 0;
 uint8_t slave_adr = 0;
 /** @brief m_buff are the two buffers for screen/slave message handling*/
 t_module m_buff[2];
+
 /* USER CODE END 0 */
 
 /**
