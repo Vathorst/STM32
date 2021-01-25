@@ -65,7 +65,7 @@ typedef struct {
   */
 #define SCHERM_UART 			huart2		/*!< UART  peripheral connected to the screen 				*/
 #define SLAVE_UART 				huart1		/*!< UART  peripheral connected to the slaves 				*/
-//#define DEBUG_UART 			huart2		/*!< UART  peripheral connected to debug PC	 				*/
+#define DEBUG_UART 			huart2		/*!< UART  peripheral connected to debug PC	 				*/
 #define MSG_TIM 				htim1		/*!< Timer peripheral used for message timeout checking 	*/
 #define LED_TIM 				htim2		/*!< Timer peripheral used for blinking LEDS non-blocking 	*/
 /**
