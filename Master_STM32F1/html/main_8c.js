@@ -11,6 +11,8 @@ var main_8c =
     [ "LED_ON", "group___l_e_d___commands.html#gaf2e697ac60e05813d45ea2c9c9e79c25", null ],
     [ "LED_TIM", "group___used___peripherials.html#gac1619442929fedce3c9378dd3eb01bfb", null ],
     [ "LED_TOGGLE", "group___l_e_d___commands.html#gafa3a1cd44351e5baf3f4520aa5444a18", null ],
+    [ "MANUAL_GPIO", "group___mode___select.html#gaf79b86055d2cf03d459c6502eb4fdc2b", null ],
+    [ "MANUAL_PIN", "group___mode___select.html#gaec4a2161ba32afaf290f6a1ef9903c7e", null ],
     [ "MSG_TIM", "group___used___peripherials.html#gab911ad79166ddb3b57718c1c9165a78d", null ],
     [ "NEXT_BT_TIME", "group___timing___definitions.html#ga59749d915719383f0f61588ca8da0a94", null ],
     [ "SCHERM_I", "group___buffer___indexes.html#ga00160bb8ea6d6ce3765dbb30885aea98", null ],

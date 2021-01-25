@@ -20,6 +20,10 @@ struct \mbox{\hyperlink{structt__module}{t\+\_\+module}}
 \item 
 \#define \mbox{\hyperlink{group___mode___select_ga5c617053fd20a3bae198334dc6ac09d1}{F\+U\+L\+L\+\_\+\+N\+UM}}~2
 \item 
+\#define \mbox{\hyperlink{group___mode___select_gaf79b86055d2cf03d459c6502eb4fdc2b}{M\+A\+N\+U\+A\+L\+\_\+\+G\+P\+IO}}~G\+P\+I\+OA
+\item 
+\#define \mbox{\hyperlink{group___mode___select_gaec4a2161ba32afaf290f6a1ef9903c7e}{M\+A\+N\+U\+A\+L\+\_\+\+P\+IN}}~G\+P\+I\+O\+\_\+\+P\+I\+N\+\_\+0
+\item 
 \#define \mbox{\hyperlink{group___used___peripherials_gafa79cee4bc998a7804af1a3169b095f0}{S\+C\+H\+E\+R\+M\+\_\+\+U\+A\+RT}}~huart2
 \item 
 \#define \mbox{\hyperlink{group___used___peripherials_ga4e019eaeae6edb6e0cf18ef7284de198}{S\+L\+A\+V\+E\+\_\+\+U\+A\+RT}}~huart1
@@ -79,7 +83,7 @@ char \mbox{\hyperlink{main_8c_af75e49c23f7837b52a29915a0cf91208}{Send\+Command}}
 void \mbox{\hyperlink{main_8c_a720d1625c6409023659f9515ce44d6e1}{Set\+Led}} (uint16\+\_\+t led\+\_\+pin, uint8\+\_\+t state)
 \begin{DoxyCompactList}\small\item\em Used to control the L\+E\+Ds using global defines. Mostly useful for the blinking functionality. This activates a timer that will turn the L\+ED off after 100ms. This makes it so L\+E\+Ds can blink without halting the execution of the program. \end{DoxyCompactList}\item 
 char \mbox{\hyperlink{main_8c_a775aad1a1ae286c9785d2cbfd135663d}{Check\+Msg}} ()
-\begin{DoxyCompactList}\small\item\em Checks if the screen sent a message. \end{DoxyCompactList}\item 
+\begin{DoxyCompactList}\small\item\em Checks if the screen sent a message. Also checks if a manual pin has been pulled down. Will activate the mastermodule\textquotesingle{}s protocol. \end{DoxyCompactList}\item 
 int \mbox{\hyperlink{main_8c_a840291bc02cba5474a4cb46a9b9566fe}{main}} (void)
 \begin{DoxyCompactList}\small\item\em The application entry point. \end{DoxyCompactList}\item 
 void \mbox{\hyperlink{main_8c_ae494a9643f29b87d6d81e5264e60e57b}{H\+A\+L\+\_\+\+U\+A\+R\+T\+\_\+\+Rx\+Cplt\+Callback}} (U\+A\+R\+T\+\_\+\+Handle\+Type\+Def $\ast$huart)
@@ -176,7 +180,7 @@ S\+T\+A\+T\+E\+\_\+\+E\+ND&Ending State ~\newline
 
 
 
-Checks if the screen sent a message. 
+Checks if the screen sent a message. Also checks if a manual pin has been pulled down. Will activate the mastermodule\textquotesingle{}s protocol. 
 
 \begin{DoxyPrecond}{Precondition}
 The screen U\+A\+RT has to be turned on 
@@ -293,7 +297,8 @@ Definitions\+: {\ttfamily 0} sends to {\bfseries{all}} slaves. {\ttfamily O\+FF}
 
 Format\+: {\ttfamily adr A\+SK}~\newline
 Definitions\+: {\ttfamily adr} specifies which slave to send the command to. {\ttfamily A\+SK} is the command.~\newline
-This command asks a specific slave to reply with an answer.~\newline
+~\newline
+ This command asks a specific slave to reply with an answer.~\newline
  This is used to verify the slave is still connected.~\newline
  ~\newline
 ~\newline
