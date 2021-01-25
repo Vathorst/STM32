@@ -54,6 +54,8 @@ typedef struct {
 
 #define HALF_NUM 				1			/*!< Value to indicate half of the buttons are used 			 	*/
 #define FULL_NUM 				2			/*!< Value to indicate all  of the buttons are used					*/
+#define MANUAL_GPIO				GPIOA		/*!< The GPIO for manual activation of the master					*/
+#define MANUAL_PIN				GPIO_PIN_0	/*!< The pin for manual activation of the master					*/
 /**
   * @}
   */
@@ -318,7 +320,12 @@ int main(void)
 		{
 			// The +1 makes sure 0 is never a chosen button. Slaves start from address 1.
 			// This can be made into a define, if there exists a desire to start from slave 2.
-			chosen_button = ( rand() % (mode == FULL_NUM ? no_slaves : no_slaves >> 1))+1;
+			// In case only one slave connected, then that slave is chosen.
+			if(no_slaves == 1 && mode == HALF_NUM)
+				chosen_button = 1;
+			else
+				chosen_button = ( rand() % (mode == FULL_NUM ? no_slaves : no_slaves >> 1))+1;
+
 			state = STATE_CTR;
 		}
 		else
@@ -884,14 +891,17 @@ void SetLed(uint16_t led_pin, uint8_t state)
 
 /**
  * @fn char CheckMsg()
- * @brief  Checks if the screen sent a message.
- *
+ * @brief  	Checks if the screen sent a message. Also checks if a manual pin has been pulled down.
+ *			Will activate the mastermodule's protocol.
  * @pre 	The screen UART has to be turned on
  * @post 	none
  * @return  HALF_NUM if the message was "180\n", FULL_NUM in every other case.
  */
 char CheckMsg()
 {
+	if(HAL_GPIO_ReadPin(MANUAL_GPIO, MANUAL_PIN) == GPIO_PIN_SET)
+		return(FULL_NUM);
+
 	if(m_buff[SCHERM_I].msg_flag == 0)
 		return(0);
 
