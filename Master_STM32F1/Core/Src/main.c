@@ -287,7 +287,7 @@ int main(void)
 		m_buff[SCHERM_I].msg_en = 1;
 		mode = CheckMsg();
 		if(SendCommand( "0 ON -1\n", "PRESSED", 1000))
-			mode += FULL_NUM;
+			mode = FULL_NUM;
 		if(mode != 0)
 		{
 			state = STATE_ADR;
