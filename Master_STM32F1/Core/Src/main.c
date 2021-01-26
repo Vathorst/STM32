@@ -75,7 +75,7 @@ typedef struct {
 /** @defgroup Timing_Definitions Delay/Timeout times in ms
   * @{
   */
-#define ACK_TIMEOUT 			1000		/*!< How long the master waits for an acknowledge from a slave 			*/
+#define ACK_TIMEOUT 			3000		/*!< How long the master waits for an acknowledge from a slave 			*/
 #define SCORE_DELAY 			10000		/*!< How long the master waits for clearing the score					*/
 #define START_TIME 				5000		/*!< Initial time the user has to press a button						*/
 #define TIME_INCREMENT 			100			/*!< How much every point of score subtracts from the total time the	\
@@ -223,6 +223,7 @@ int main(void)
   m_buff[SCHERM_I].used_huart = &SCHERM_UART;
   m_buff[SLAVE_I].used_huart  = &SLAVE_UART;
 
+  uint8_t prev_btn		= 0;
   uint8_t no_slaves  	= 0;
   enum state_t state	= STATE_STR;
   uint16_t mode 	 	= FULL_NUM;
@@ -274,7 +275,6 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
-	/** \n<h2><center> State Machine </center></h2> */
     /* USER CODE BEGIN 3 */
 	switch(state)
 	  {
@@ -286,11 +286,15 @@ int main(void)
 	  case STATE_STR:
 		m_buff[SCHERM_I].msg_en = 1;
 		mode = CheckMsg();
+		if(SendCommand( "0 ON -1\n", "PRESSED", 1000))
+			mode += FULL_NUM;
 		if(mode != 0)
 		{
 			state = STATE_ADR;
 			m_buff[SCHERM_I].msg_en   = 0;
 			m_buff[SCHERM_I].msg_flag = 0;
+			SendMessage("0 OFF\n");
+			HAL_Delay(NEXT_BT_TIME);
 		}
 		break;
 	  /**  <h3>Addressing State</h3>
@@ -324,8 +328,14 @@ int main(void)
 			if(no_slaves == 1 && mode == HALF_NUM)
 				chosen_button = 1;
 			else
-				chosen_button = ( rand() % (mode == FULL_NUM ? no_slaves : no_slaves >> 1))+1;
-
+			{
+				do
+				{
+					chosen_button = ( rand() % (mode == FULL_NUM ? no_slaves : no_slaves >> 1))+1;
+				}
+				while(chosen_button == prev_btn && no_slaves > 1);
+				prev_btn = chosen_button;
+			}
 			state = STATE_CTR;
 		}
 		else
@@ -618,23 +628,23 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(On_Board_LED_GPIO_Port, On_Board_LED_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : PC13 */
-  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  /*Configure GPIO pin : On_Board_LED_Pin */
+  GPIO_InitStruct.Pin = On_Board_LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  HAL_GPIO_Init(On_Board_LED_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA0 PA7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_7;
+  /*Configure GPIO pins : Manual_Start_Short_Pin Button_1_Pin */
+  GPIO_InitStruct.Pin = Manual_Start_Short_Pin|Button_1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB0 PB1 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
+  /*Configure GPIO pins : Button_2_Pin Button_3_Pin */
+  GPIO_InitStruct.Pin = Button_2_Pin|Button_3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -902,7 +912,7 @@ char CheckMsg()
 	if(HAL_GPIO_ReadPin(MANUAL_GPIO, MANUAL_PIN) == GPIO_PIN_SET)
 		return(FULL_NUM);
 
-	if(m_buff[SCHERM_I].msg_flag == 0)
+	else if(m_buff[SCHERM_I].msg_flag == 0)
 		return(0);
 
 	if(strcmp( (char *) m_buff[SCHERM_I].rec_buff, HALF) == 0)

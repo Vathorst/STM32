@@ -60,6 +60,16 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define On_Board_LED_Pin GPIO_PIN_13
+#define On_Board_LED_GPIO_Port GPIOC
+#define Manual_Start_Short_Pin GPIO_PIN_0
+#define Manual_Start_Short_GPIO_Port GPIOA
+#define Button_1_Pin GPIO_PIN_7
+#define Button_1_GPIO_Port GPIOA
+#define Button_2_Pin GPIO_PIN_0
+#define Button_2_GPIO_Port GPIOB
+#define Button_3_Pin GPIO_PIN_1
+#define Button_3_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 #define LED_GPIO GPIOC
 #define MSG_MAX_LEN 16
