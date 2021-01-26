@@ -161,6 +161,7 @@ char SendMessage(const char * msg);
 char SendCommand(const char * cmd, const char * ans, int timeout);
 void SetLed(uint16_t led_pin, uint8_t state);
 char CheckMsg();
+char IsAlphaNum(char c);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -682,7 +683,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 	// Master has defined answers its looking for
 	// Only listens to the message if a command has been sent
-	if(m_buff[ix].msg_en == 0)
+	// Also discards any chars that aren't allowed
+	if(m_buff[ix].msg_en == 0 || IsAlphaNum(rx_buff[0]) == 0)
 	{
 		HAL_UART_Receive_IT(huart, rx_buff, 1);
 		return;
@@ -919,6 +921,27 @@ char CheckMsg()
 		return(HALF_NUM);
 	else
 		return(FULL_NUM);
+}
+
+/**
+ * @brief Checks if character is a letter or a number or \n.
+ * @param c Char to be checked
+ * @return non-zero if char is alphanumerical or \n
+ */
+char IsAlphaNum(char c)
+{
+	if(c == '\n')
+		return 1;
+	if(c == ' ')
+		return 1;
+	if(c >= 'A' && c <= 'Z')
+		return 1;
+	if(c >= 'a' && c <= 'z')
+		return 1;
+	if(c >= '0' && c <= '9')
+		return 1;
+	else
+		return 0;
 }
 /* USER CODE END 4 */
 
