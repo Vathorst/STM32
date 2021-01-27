@@ -75,8 +75,8 @@ typedef struct {
 /** @defgroup Timing_Definitions Delay/Timeout times in ms
   * @{
   */
-#define ACK_TIMEOUT 			3000		/*!< How long the master waits for an acknowledge from a slave 			*/
-#define SCORE_DELAY 			10000		/*!< How long the master waits for clearing the score					*/
+#define ACK_TIMEOUT 			1000		/*!< How long the master waits for an acknowledge from a slave 			*/
+#define SCORE_DELAY 			3000		/*!< How long the master waits for clearing the score					*/
 #define START_TIME 				5000		/*!< Initial time the user has to press a button						*/
 #define TIME_INCREMENT 			100			/*!< How much every point of score subtracts from the total time the	\
 												 user has to press the button										*/
@@ -400,7 +400,7 @@ int main(void)
 	  case STATE_END:
 		sprintf(buf, "SCORE =%d\r\n", score);
 		HAL_UART_Transmit(&SCHERM_UART, (uint8_t *) buf, strlen( (char *) buf), 100);
-		HAL_Delay(SCORE_DELAY);
+		HAL_DELAY(SCORE_DELAY);
 
 #ifdef debug
 	sprintf(buf, "Score = %d\n", score);
