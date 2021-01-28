@@ -399,7 +399,7 @@ int main(void)
 		*  		  Next state will be returning to start.
 		*/
 	  case STATE_END:
-		sprintf(buf, "SCORE =%d\r\n", score);
+		sprintf(buf, "SCORE = %d\r\n", score);
 		HAL_UART_Transmit(&SCHERM_UART, (uint8_t *) buf, strlen( (char *) buf), 100);
 		HAL_DELAY(SCORE_DELAY);
 
