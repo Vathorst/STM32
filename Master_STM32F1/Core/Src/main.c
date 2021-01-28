@@ -356,7 +356,7 @@ int main(void)
 		sprintf(buf, "0 ON %d\n", chosen_button);
 		if(SendCommand(buf, "PRESSED", START_TIME - ( score * TIME_INCREMENT) ) )
 		{
-			// The reply is PRESSED n, so to read the received number the 8th byte will be used.
+			// The reply is PRESSED n, so to read the received number the 8th byte will be read.
 			// P|R|E|S|S|E|D| |n
 			// 0|1|2|3|4|5|6|7|8
 			if(atoi( (char *) &m_buff[SLAVE_I].rec_buff[8]) == chosen_button)
