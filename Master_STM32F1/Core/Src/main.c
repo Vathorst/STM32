@@ -65,7 +65,7 @@ typedef struct {
   */
 #define SCHERM_UART 			huart1		/*!< UART  peripheral connected to the screen 				*/
 #define SLAVE_UART 				huart2		/*!< UART  peripheral connected to the slaves 				*/
-#define DEBUG_UART 			huart1		/*!< UART  peripheral connected to debug PC	 				*/
+#define DEBUG_UART 				huart1		/*!< UART  peripheral connected to debug PC	 				*/
 #define MSG_TIM 				htim1		/*!< Timer peripheral used for message timeout checking 	*/
 #define LED_TIM 				htim2		/*!< Timer peripheral used for blinking LEDS non-blocking 	*/
 /**
@@ -283,6 +283,7 @@ int main(void)
 	    *  @brief Reads incoming messages from the screen module.
 	    *  		  Will switch to addressing state if message is received.
 	    *  		  Mode will indicate if full range of buttons is to be used or only half.
+	    *  		  Added a way to start the game by pushing the buttons.
 	    */
 	  case STATE_STR:
 		m_buff[SCHERM_I].msg_en = 1;
